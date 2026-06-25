@@ -18,14 +18,6 @@ CLAUDE_DIR="$HOME/.claude"
 COMMANDS_DIR="$CLAUDE_DIR/commands"
 MCP_JS="$REPO_DIR/packages/mcp-sermon-prep/dist/index.js"
 
-# Claude Code liest MCP-Server auf macOS aus claude_desktop_config.json,
-# auf Linux aus ~/.claude/settings.json
-if [[ "$(uname)" == "Darwin" ]]; then
-  SETTINGS_FILE="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-else
-  SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-fi
-
 echo ""
 echo -e "${BOLD}sermon-prepair – Gottesdienst-Vorbereitung${NC}"
 echo -e "Installationsverzeichnis: ${BLUE}$REPO_DIR${NC}"
@@ -90,25 +82,11 @@ ok "Skill:    $COMMANDS_DIR/gottesdienst.md"
 cp "$REPO_DIR/.claude/commands/gottesdienst-template.html" "$COMMANDS_DIR/gottesdienst-template.html"
 ok "Template: $COMMANDS_DIR/gottesdienst-template.html"
 
-# MCP in ~/.claude/settings.json eintragen (via Node.js – kein jq nötig)
-info "MCP-Server in $SETTINGS_FILE eintragen …"
-node --input-type=module <<EOF
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { dirname } from 'path';
-
-const settingsPath = '${SETTINGS_FILE}';
-let settings = {};
-if (existsSync(settingsPath)) {
-  try { settings = JSON.parse(readFileSync(settingsPath, 'utf8')); } catch {}
-}
-settings.mcpServers ??= {};
-const existing = settings.mcpServers['sermon-prep'];
-settings.mcpServers['sermon-prep'] = { command: '${NODE_BIN}', args: ['${MCP_JS}'] };
-mkdirSync(dirname(settingsPath), { recursive: true });
-writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-console.log(existing ? 'aktualisiert' : 'neu eingetragen');
-EOF
-ok "MCP registriert in: $SETTINGS_FILE"
+# MCP via claude mcp add eintragen (–scope user → ~/.claude/settings.json)
+info "MCP-Server registrieren …"
+claude mcp remove --scope user sermon-prep 2>/dev/null || true
+claude mcp add --scope user sermon-prep -- "$NODE_BIN" "$MCP_JS"
+ok "MCP registriert (Scope: user)"
 
 # ── Fertig ───────────────────────────────────────────────────────────────────
 echo ""

@@ -24,11 +24,10 @@ function Get-VersionParts {
 }
 
 # ── Pfade ────────────────────────────────────────────────────────────────────
-$RepoDir      = $PSScriptRoot
-$ClaudeDir    = Join-Path $HOME '.claude'
-$CommandsDir  = Join-Path $ClaudeDir 'commands'
-$SettingsFile = Join-Path $ClaudeDir 'settings.json'
-$McpJs        = Join-Path $RepoDir 'packages\mcp-sermon-prep\dist\index.js'
+$RepoDir     = $PSScriptRoot
+$ClaudeDir   = Join-Path $HOME '.claude'
+$CommandsDir = Join-Path $ClaudeDir 'commands'
+$McpJs       = Join-Path $RepoDir 'packages\mcp-sermon-prep\dist\index.js'
 
 Write-Host ""
 Write-Host "sermon-prepair – Gottesdienst-Vorbereitung" -ForegroundColor White
@@ -106,39 +105,13 @@ Copy-Item -Force `
   (Join-Path $CommandsDir 'gottesdienst-template.html')
 Write-Ok "Template: $CommandsDir\gottesdienst-template.html"
 
-# MCP in settings.json eintragen / aktualisieren
-Write-Info "MCP-Server in $SettingsFile eintragen ..."
 
-New-Item -ItemType Directory -Force -Path $ClaudeDir | Out-Null
-
-$settings = @{}
-if (Test-Path $SettingsFile) {
-  try {
-    $raw = Get-Content $SettingsFile -Raw -Encoding UTF8
-    if ($raw.Trim()) {
-      $settings = $raw | ConvertFrom-Json -AsHashtable
-    }
-  } catch {
-    Write-Warn "settings.json konnte nicht gelesen werden – wird neu erstellt."
-  }
-}
-
-if (-not $settings.ContainsKey('mcpServers')) {
-  $settings['mcpServers'] = @{}
-}
-
-$existed = $settings['mcpServers'].ContainsKey('sermon-prep')
-# Pfadtrenner: Windows-Backslash in JSON als Forward-Slash für Node-Kompatibilität
-$mcpJsForward  = $McpJs -replace '\\','/'
-$nodeBinForward = $NodeBin -replace '\\','/'
-$settings['mcpServers']['sermon-prep'] = @{
-  command = $nodeBinForward
-  args    = @($mcpJsForward)
-}
-
-$settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
-$action = if ($existed) { 'aktualisiert' } else { 'neu eingetragen' }
-Write-Ok "MCP $action in: $SettingsFile"
+# MCP via claude mcp add eintragen (--scope user → ~/.claude/settings.json)
+Write-Info "MCP-Server registrieren ..."
+claude mcp remove --scope user sermon-prep 2>$null
+claude mcp add --scope user sermon-prep -- $NodeBin $McpJs
+if ($LASTEXITCODE -ne 0) { Write-Fail "claude mcp add fehlgeschlagen." }
+Write-Ok "MCP registriert (Scope: user)"
 
 # ── Fertig ───────────────────────────────────────────────────────────────────
 Write-Host ""
