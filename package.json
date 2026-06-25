@@ -1,0 +1,12 @@
+{
+  "name": "sermon-prepair",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=packages/mcp-sermon-prep",
+    "dev": "npm run dev --workspace=packages/mcp-sermon-prep"
+  }
+}

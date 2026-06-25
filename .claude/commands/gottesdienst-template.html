@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{SUNDAY_NAME}} · {{DATE}}</title>
+  <style>
+    :root {
+      --liturgical-color: {{LITURGICAL_COLOR_HEX}};
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a1a;
+      background: #fafaf8;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      border-top: 6px solid var(--liturgical-color);
+      padding-top: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .date {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #666;
+      margin: 0 0 0.4rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: normal;
+      margin: 0 0 0.6rem;
+      color: #111;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .color-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .color-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--liturgical-color);
+      border: 1px solid rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    .season::before { content: '·'; margin-right: 1rem; }
+
+    /* ── Passage sections ────────────────────────────────── */
+    .passage {
+      margin-bottom: 3rem;
+    }
+
+    .passage-header {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0.4rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .passage-role {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #888;
+      margin: 0 0 0.2rem;
+    }
+
+    .passage-reference {
+      font-size: 1.25rem;
+      font-weight: normal;
+      color: #111;
+      margin: 0;
+    }
+
+    .passage-text {
+      white-space: pre-wrap;
+      font-size: 1rem;
+      line-height: 1.85;
+      color: #2a2a2a;
+      margin: 0;
+    }
+
+    /* ── Placeholder state ───────────────────────────────── */
+    .passage--empty .passage-text {
+      color: #bbb;
+      font-style: italic;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e0e0e0;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+
+    /* ── Print ───────────────────────────────────────────── */
+    @media print {
+      body { background: #fff; font-size: 11pt; }
+      .page { padding: 1.5cm 2cm; max-width: 100%; }
+      .passage { page-break-inside: avoid; }
+      header { border-top-width: 4px; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="date">{{DATE}}</p>
+    <h1>{{SUNDAY_NAME}}</h1>
+    <div class="meta">
+      <span class="color-badge">
+        <span class="color-swatch"></span>
+        {{LITURGICAL_COLOR}}
+      </span>
+      <span class="season">{{LITURGICAL_SEASON}}</span>
+    </div>
+  </header>
+
+  <section class="passage">
+    <div class="passage-header">
+      <p class="passage-role">Lesung Altes Testament</p>
+      <h2 class="passage-reference">{{AT_REFERENCE}}</h2>
+    </div>
+    <p class="passage-text">{{AT_TEXT}}</p>
+  </section>
+
+  <section class="passage">
+    <div class="passage-header">
+      <p class="passage-role">Lesung Neues Testament</p>
+      <h2 class="passage-reference">{{NT_REFERENCE}}</h2>
+    </div>
+    <p class="passage-text">{{NT_TEXT}}</p>
+  </section>
+
+  <section class="passage">
+    <div class="passage-header">
+      <p class="passage-role">Predigttext</p>
+      <h2 class="passage-reference">{{PREDIGTTEXT_REFERENCE}}</h2>
+    </div>
+    <p class="passage-text">{{PREDIGTTEXT_TEXT}}</p>
+  </section>
+
+  <footer>
+    Texte: Zürcherbibel · Kirchenjahr: kirchenjahr-evangelisch.de · Perikopen: pfarrverein.ch
+  </footer>
+
+</div>
+</body>
+</html>
