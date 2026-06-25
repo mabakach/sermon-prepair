@@ -42,12 +42,13 @@ $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
   Write-Fail "Node.js nicht gefunden. Bitte installiere Node.js 18+ von https://nodejs.org/"
 }
+$NodeBin     = $nodeCmd.Source
 $nodeVersion = (node --version) -replace '^v',''
 $nodeMajor   = [int]($nodeVersion -split '\.')[0]
 if ($nodeMajor -lt 18) {
   Write-Fail "Node.js v$nodeVersion gefunden – Version 18+ wird benötigt."
 }
-Write-Ok "Node.js v$nodeVersion"
+Write-Ok "Node.js v$nodeVersion ($NodeBin)"
 
 # npm >= 7
 $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
@@ -128,9 +129,10 @@ if (-not $settings.ContainsKey('mcpServers')) {
 
 $existed = $settings['mcpServers'].ContainsKey('sermon-prep')
 # Pfadtrenner: Windows-Backslash in JSON als Forward-Slash für Node-Kompatibilität
-$mcpJsForward = $McpJs -replace '\\','/'
+$mcpJsForward  = $McpJs -replace '\\','/'
+$nodeBinForward = $NodeBin -replace '\\','/'
 $settings['mcpServers']['sermon-prep'] = @{
-  command = 'node'
+  command = $nodeBinForward
   args    = @($mcpJsForward)
 }
 

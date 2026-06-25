@@ -30,11 +30,12 @@ step "1/4  Voraussetzungen prüfen"
 if ! command -v node &>/dev/null; then
   fail "Node.js nicht gefunden. Bitte installiere Node.js 18+ von https://nodejs.org/"
 fi
+NODE_BIN="$(command -v node)"
 NODE_MAJOR=$(node --version | sed 's/v//' | cut -d. -f1)
 if [ "$NODE_MAJOR" -lt 18 ]; then
   fail "Node.js $(node --version) gefunden – Version 18+ wird benötigt."
 fi
-ok "Node.js $(node --version)"
+ok "Node.js $(node --version) ($NODE_BIN)"
 
 # npm ≥ 7
 if ! command -v npm &>/dev/null; then
@@ -95,7 +96,7 @@ if (existsSync(settingsPath)) {
 }
 settings.mcpServers ??= {};
 const existing = settings.mcpServers['sermon-prep'];
-settings.mcpServers['sermon-prep'] = { command: 'node', args: ['${MCP_JS}'] };
+settings.mcpServers['sermon-prep'] = { command: '${NODE_BIN}', args: ['${MCP_JS}'] };
 mkdirSync(dirname(settingsPath), { recursive: true });
 writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
 console.log(existing ? 'aktualisiert' : 'neu eingetragen');
