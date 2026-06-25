@@ -104,11 +104,25 @@
     }
 
     .passage-text {
-      white-space: pre-wrap;
       font-size: 1rem;
       line-height: 1.85;
       color: #2a2a2a;
       margin: 0;
+    }
+
+    /* ── Verse numbers ───────────────────────────────────── */
+    sup.vn {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.6em;
+      font-weight: 600;
+      vertical-align: super;
+      color: #999;
+      margin-right: 0.15em;
+      margin-left: 0.3em;
+      letter-spacing: 0;
+    }
+    sup.vn:first-child {
+      margin-left: 0;
     }
 
     /* ── Placeholder state ───────────────────────────────── */
