@@ -16,8 +16,15 @@ step() { echo -e "\n${BOLD}$*${NC}"; }
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
 COMMANDS_DIR="$CLAUDE_DIR/commands"
-SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 MCP_JS="$REPO_DIR/packages/mcp-sermon-prep/dist/index.js"
+
+# Claude Code liest MCP-Server auf macOS aus claude_desktop_config.json,
+# auf Linux aus ~/.claude/settings.json
+if [[ "$(uname)" == "Darwin" ]]; then
+  SETTINGS_FILE="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+else
+  SETTINGS_FILE="$CLAUDE_DIR/settings.json"
+fi
 
 echo ""
 echo -e "${BOLD}sermon-prepair – Gottesdienst-Vorbereitung${NC}"
