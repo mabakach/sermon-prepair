@@ -12,43 +12,33 @@ Claude-Skill zur Vorbereitung reformierter Gottesdienste. Holt automatisch den S
 
 ## Installation
 
-### 1. Repository klonen und Abhängigkeiten installieren
+### macOS / Linux
 
 ```bash
 git clone <repo-url> ~/sermon-prepair
 cd ~/sermon-prepair
-npm install
-npm run build
+./install.sh
 ```
 
-### 2. MCP-Server registrieren
+### Windows (PowerShell)
 
-Öffne (oder erstelle) `~/.claude/settings.json` und füge den `sermon-prep`-Eintrag unter `mcpServers` ein:
-
-```json
-{
-  "mcpServers": {
-    "sermon-prep": {
-      "command": "node",
-      "args": ["/Users/DEINNAME/sermon-prepair/packages/mcp-sermon-prep/dist/index.js"]
-    }
-  }
-}
+```powershell
+git clone <repo-url> $HOME\sermon-prepair
+cd $HOME\sermon-prepair
+.\install.ps1
 ```
 
-> Ersetze `/Users/DEINNAME/sermon-prepair` durch den absoluten Pfad, unter dem du das Repository abgelegt hast (`pwd` im Repo-Root zeigt ihn dir).
+> Falls PowerShell die Ausführung blockiert, einmalig ausführen:
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
-### 3. Skill global installieren
+### Was das Installationsskript tut
 
-Kopiere die Skill-Datei und das HTML-Template in dein globales Claude-Benutzerverzeichnis, damit der Slash-Command in jedem Projekt verfügbar ist:
+1. **Voraussetzungen prüfen** – Node.js ≥ 18, npm ≥ 7 und Claude Code werden geprüft; fehlt etwas, wird der Vorgang mit einem Hinweis abgebrochen.
+2. **Abhängigkeiten installieren / aktualisieren** – `npm install` im Repo-Root.
+3. **MCP-Server bauen** – `npm run build` kompiliert TypeScript nach `dist/`.
+4. **Claude-Integration einrichten** – kopiert Skill und Template nach `~/.claude/commands/` und trägt den MCP-Server in `~/.claude/settings.json` ein. Ist ein Eintrag bereits vorhanden, wird er aktualisiert.
 
-```bash
-mkdir -p ~/.claude/commands
-cp .claude/commands/gottesdienst.md ~/.claude/commands/gottesdienst.md
-cp .claude/commands/gottesdienst-template.html ~/.claude/commands/gottesdienst-template.html
-```
-
-Starte Claude Code danach neu (oder führe `/reload` aus), damit der neue Slash-Command und der MCP-Server erkannt werden.
+Starte Claude Code nach der Installation neu (oder führe `/reload` aus).
 
 ## Verwendung
 
