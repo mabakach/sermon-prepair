@@ -9,13 +9,21 @@ Hilf beim Vorbereiten eines reformierten Gottesdienstes. Nutze die MCP-Tools `ge
 ```
 
 - **datum**: Pflichtfeld. Format `YYYY-MM-DD` oder `DD.MM.YYYY`.
-- **--at**: Optional. Bibelstelle für die Lesung Altes Testament, z.B. `Jeremia 26, 1-15`.
-- **--nt**: Optional. Bibelstelle für die Lesung Neues Testament, z.B. `Römer 6, 12-14`.
-- **--predigttext**: Optional. Bibelstelle für den Predigttext, z.B. `Matthäus 10, 24-33`.
+- **--at**: Optional. Eigene Bibelstelle für die Lesung Altes Testament.
+- **--nt**: Optional. Eigene Bibelstelle für die Lesung Neues Testament.
+- **--predigttext**: Optional. Eigene Bibelstelle für den Predigttext.
 
 Wenn das Datum im Format `DD.MM.YYYY` angegeben wurde, wandle es zunächst in `YYYY-MM-DD` um.
 
-Die drei Bibelstellen-Flags sind die kanonischen Bezeichnungen. Claude erkennt auch Kurzformen wie `--a`, `--n`, `--p` oder freie Positionsangaben, solange die Zuordnung eindeutig ist.
+---
+
+## Quellenmarkierung (wichtig für HTML-Ausgabe)
+
+Jede der drei Bibelstellen hat eine **Quelle**:
+- **Perikopenordnung**: Stelle stammt aus `get_lectionary` → Badge `{{XX_BADGE}}` = `<span class="perikope-tag">nach Perikopenordnung</span>`
+- **Eigene Wahl**: Stelle wurde vom Benutzer angegeben → Badge `{{XX_BADGE}}` = (leer)
+
+Diese Unterscheidung muss für AT, NT und Predigttext separat getrackt und in die Platzhalter `{{AT_BADGE}}`, `{{NT_BADGE}}`, `{{PREDIGTTEXT_BADGE}}` geschrieben werden.
 
 ---
 
@@ -29,30 +37,54 @@ Berechne den Wochentag (`new Date('YYYY-MM-DD').getDay()`, Sonntag = 0).
 
 ### Fall A: Datum ist ein Sonntag
 
-1. Ruf `get_lectionary(date)` auf → liefert `sunday_name` und drei Perikopen-Stellen (AT, NT, Predigttext).
+1. Ruf `get_lectionary(date)` auf → liefert `sunday_name` und drei Perikopen-Stellen.
 2. Ruf `get_church_calendar(date, sunday_name)` auf → liefert `liturgical_color` und `liturgical_season`.
-3. Bestimme die drei Bibelstellen für AT, NT und Predigttext:
-   - Wurde `--at` übergeben → verwende diesen Wert, sonst den Perikopen-Wert.
-   - Wurde `--nt` übergeben → verwende diesen Wert, sonst den Perikopen-Wert.
-   - Wurde `--predigttext` übergeben → verwende diesen Wert, sonst den Perikopen-Wert.
-4. **Wurden ein oder mehrere Flags übergeben, aber nicht alle drei?**
-   Frage für jeden fehlenden Slot interaktiv nach (optional, Benutzer darf überspringen):
-   > Möchtest du für **[Lesung Altes Testament / Lesung Neues Testament / Predigttext]** eine eigene Bibelstelle verwenden?
-   > Perikopen-Vorschlag: *[Perikopen-Stelle]*. Eingabe oder Enter zum Übernehmen.
-   Übernimm die Eingabe, wenn vorhanden; behalte den Perikopen-Wert bei leerem Enter.
-5. Ruf für alle drei Stellen `get_bible_text(reference)` auf (ggf. parallel).
-6. Erstelle Ordner und HTML-Datei (siehe **Datei-Ausgabe**).
-7. Gib das Ergebnis im Chat aus (siehe **Chat-Ausgabeformat**).
+3. **Wurden KEINE eigenen Bibelstellen als Parameter übergeben?**
+
+   Zeige dem Benutzer die Perikopen und frage nach:
+
+   > Die Perikopenordnung für **[Sonntagsname]** ([DD.MM.YYYY]):
+   >
+   > - **Lesung AT**: [AT-Stelle]
+   > - **Lesung NT**: [NT-Stelle]
+   > - **Predigttext**: [Predigttext-Stelle]
+   >
+   > Möchtest du diese Bibelstellen übernehmen, oder eigene angeben?
+   > **A)** Perikopenordnung übernehmen
+   > **B)** Eigene Bibelstellen angeben
+
+   - **Antwort A**: Alle drei aus Perikopen → alle drei Badges gesetzt.
+   - **Antwort B**: Für jeden Slot nachfragen (optional):
+     > Lesung Altes Testament (Enter = Perikopen-Stelle *[Stelle]* übernehmen):
+     - Eingabe vorhanden → eigene Stelle, kein Badge.
+     - Leeres Enter → Perikopen-Stelle, Badge gesetzt.
+
+4. **Wurden EINZELNE eigene Bibelstellen übergeben (aber nicht alle drei)?**
+
+   Für vorhandene Flags: eigene Stelle verwenden, kein Badge.
+   Für fehlende Slots: Perikopen-Vorschlag anzeigen und fragen (optional):
+   > Möchtest du für **[Slot]** eine eigene Bibelstelle verwenden?
+   > Perikopen-Vorschlag: *[Stelle]* (Enter = übernehmen)
+   - Eingabe vorhanden → eigene Stelle, kein Badge.
+   - Leeres Enter → Perikopen-Stelle, Badge gesetzt.
+
+5. **Wurden ALLE DREI eigenen Bibelstellen übergeben?**
+
+   Perikopen-Stellen ignorieren. Kein Badge für irgendeine Stelle.
+
+6. Ruf für alle drei Stellen `get_bible_text(reference)` auf.
+7. Erstelle Ordner und HTML-Datei (siehe **Datei-Ausgabe**).
+8. Gib das Ergebnis im Chat aus (siehe **Chat-Ausgabeformat**).
 
 ---
 
 ### Fall B: Datum ist KEIN Sonntag – mindestens eine Bibelstelle übergeben
 
-Überspringe Kirchenjahr- und Perikopen-Abfrage.
+Überspringe Kirchenjahr- und Perikopen-Abfrage. Kein Badge für irgendeine Stelle.
 
 1. **Wurden nicht alle drei Flags übergeben?**
    Frage für jeden fehlenden Slot interaktiv nach (optional):
-   > Möchtest du für **[Lesung Altes Testament / Lesung Neues Testament / Predigttext]** eine Bibelstelle angeben? (optional, Enter zum Überspringen)
+   > Möchtest du für **[Slot]** eine Bibelstelle angeben? (optional, Enter zum Überspringen)
    Überspringe den Slot bei leerem Enter.
 2. Ruf für alle ausgefüllten Stellen `get_bible_text(reference)` auf.
 3. Erstelle Ordner und HTML-Datei (siehe **Datei-Ausgabe**).
@@ -72,9 +104,7 @@ Frage den Benutzer:
 > B) Perikopen des **nächsten Sonntags** (DD.MM.YYYY) verwenden
 > C) Bibelstellen manuell eingeben
 
-Warte auf die Antwort:
-- **A**: Führe Fall A mit `prev` als Datum aus (keine eigenen Bibelstellen übergeben → alles aus Perikopen).
-- **B**: Führe Fall A mit `next` als Datum aus.
+- **A/B**: Führe Fall A mit dem gewählten Sonntag aus (keine eigenen Flags → Perikopen-Abfrage mit Bestätigung).
 - **C**: Frage der Reihe nach nach AT, NT und Predigttext (jeweils optional), dann Fall B.
 
 ---
@@ -89,16 +119,10 @@ Sobald alle Daten gesammelt sind, erstelle im **aktuellen Arbeitsverzeichnis** e
 YYYY-MM-DD_<Sonntagsname-als-slug>
 ```
 
-Slug-Regeln für den Sonntagsnamen:
-- Leerzeichen → `-`
-- Punkte entfernen (aus „4." wird „4")
-- Umlaute beibehalten (z.B. `Bußtag` bleibt `Bußtag`)
-- Keine Kleinschreibung
-
+Slug-Regeln: Leerzeichen → `-`, Punkte entfernen, Umlaute beibehalten, keine Kleinschreibung.
 Beispiel: `2026-06-28_4-Sonntag-nach-Trinitatis`
 
-Wenn kein Sonntagsname vorhanden ist (kein Sonntag, Fall B), verwende `Gottesdienst` als Slug:
-`2026-06-25_Gottesdienst`
+Ohne Sonntagsname (Fall B): `2026-06-25_Gottesdienst`
 
 ### HTML-Datei befüllen
 
@@ -112,15 +136,18 @@ Wenn kein Sonntagsname vorhanden ist (kein Sonntag, Fall B), verwende `Gottesdie
 |---|---|
 | `{{DATE}}` | Datum als `DD.MM.YYYY` |
 | `{{SUNDAY_NAME}}` | Sonntagsname oder `Gottesdienst` |
-| `{{LITURGICAL_COLOR}}` | Farbenname auf Deutsch (z.B. `Grün`) oder leer |
-| `{{LITURGICAL_COLOR_HEX}}` | CSS-Hexwert aus Farbtabelle (siehe unten) oder `#888888` |
-| `{{LITURGICAL_SEASON}}` | Festzeit (z.B. `Trinitatiszeit`) oder leer |
-| `{{AT_REFERENCE}}` | Bibelstelle Lesung AT oder leer |
-| `{{AT_TEXT}}` | Bibeltext Lesung AT oder leer |
-| `{{NT_REFERENCE}}` | Bibelstelle Lesung NT oder leer |
-| `{{NT_TEXT}}` | Bibeltext Lesung NT oder leer |
-| `{{PREDIGTTEXT_REFERENCE}}` | Bibelstelle Predigttext oder leer |
-| `{{PREDIGTTEXT_TEXT}}` | Bibeltext Predigttext oder leer |
+| `{{LITURGICAL_COLOR}}` | Farbenname auf Deutsch oder leer |
+| `{{LITURGICAL_COLOR_HEX}}` | CSS-Hexwert aus Farbtabelle oder `#888888` |
+| `{{LITURGICAL_SEASON}}` | Festzeit oder leer |
+| `{{AT_REFERENCE}}` | Bibelstelle Lesung AT oder `–` |
+| `{{AT_TEXT}}` | Bibeltext Lesung AT oder `(keine Angabe)` |
+| `{{AT_BADGE}}` | `<span class="perikope-tag">nach Perikopenordnung</span>` oder leer |
+| `{{NT_REFERENCE}}` | Bibelstelle Lesung NT oder `–` |
+| `{{NT_TEXT}}` | Bibeltext Lesung NT oder `(keine Angabe)` |
+| `{{NT_BADGE}}` | Badge oder leer |
+| `{{PREDIGTTEXT_REFERENCE}}` | Bibelstelle Predigttext oder `–` |
+| `{{PREDIGTTEXT_TEXT}}` | Bibeltext Predigttext oder `(keine Angabe)` |
+| `{{PREDIGTTEXT_BADGE}}` | Badge oder leer |
 
 ### Farbtabelle (liturgische Farbe → CSS-Hex)
 
@@ -133,13 +160,11 @@ Wenn kein Sonntagsname vorhanden ist (kein Sonntag, Fall B), verwende `Gottesdie
 | Schwarz | `#1A1A1A` |
 | Gold | `#B8860B` |
 
-Ist die Farbe unbekannt oder nicht vorhanden, verwende `#888888`.
+Unbekannte Farbe → `#888888`.
 
 ### Fehlende Slots im HTML
 
-Wenn ein Slot (AT, NT oder Predigttext) leer ist:
-- Setze `{{XX_REFERENCE}}` auf `–` und `{{XX_TEXT}}` auf `(keine Angabe)`.
-- Füge der `<section class="passage">` die Klasse `passage--empty` hinzu.
+Leere Slots: `{{XX_REFERENCE}}` = `–`, `{{XX_TEXT}}` = `(keine Angabe)`, `{{XX_BADGE}}` = leer, `<section>` erhält Klasse `passage--empty`.
 
 ---
 
@@ -154,26 +179,28 @@ Wenn ein Slot (AT, NT oder Predigttext) leer ist:
 
 ---
 
-### Lesung Altes Testament – [Bibelstelle]
+### Lesung Altes Testament – [Bibelstelle] *(nach Perikopenordnung)*
 
-[Bibeltext aus der Zürcherbibel]
+[Bibeltext]
 
 ---
 
 ### Lesung Neues Testament – [Bibelstelle]
 
-[Bibeltext aus der Zürcherbibel]
+[Bibeltext]
 
 ---
 
-### Predigttext – [Bibelstelle]
+### Predigttext – [Bibelstelle] *(nach Perikopenordnung)*
 
-[Bibeltext aus der Zürcherbibel]
+[Bibeltext]
 
 ---
 
 📁 Gespeichert unter: `[Ordnerpfad]/index.html`
 ```
+
+*(nach Perikopenordnung)* nur anzeigen wenn die Stelle aus der Perikopenordnung stammt. Fehlende/übersprungene Slots weglassen.
 
 ### Kein Sonntag (Fall B)
 
@@ -186,5 +213,3 @@ Wenn ein Slot (AT, NT oder Predigttext) leer ist:
 
 📁 Gespeichert unter: `[Ordnerpfad]/index.html`
 ```
-
-Fehlende (übersprungene) Slots werden im Chat-Ausgabeformat weggelassen.
