@@ -43,7 +43,7 @@ Starte Claude Code nach der Installation neu (oder führe `/reload` aus).
 ## Verwendung
 
 ```
-/gottesdienst <datum> [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>] [--bild]
+/gottesdienst <datum> [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>] [--bild] [--varianten <n>]
 ```
 
 Die drei optionalen Flags entsprechen den Gottesdienst-Rollen:
@@ -54,7 +54,7 @@ Die drei optionalen Flags entsprechen den Gottesdienst-Rollen:
 | `--nt` | Lesung Neues Testament | `--nt "Römer 6, 12-14"` |
 | `--predigttext` | Predigttext | `--predigttext "Matthäus 10, 24-33"` |
 
-Zusätzlich erzeugt `--bild` (nur deutsche Ordnung) ein passendes Bild zum Wochenspruch, lokal mit FLUX.2 Klein 9B. Es wird als `bild.png` im Ordner gespeichert und oben im HTML eingebunden. Voraussetzungen siehe **Bildgenerierung**.
+Zusätzlich erzeugt `--bild` (nur deutsche Ordnung) ein passendes Bild zum Wochenspruch, lokal mit FLUX.2 Klein 9B. Es wird als `bild.png` im Ordner gespeichert und oben im HTML eingebunden. Mit `--varianten <n>` (2 bis 4) entstehen mehrere Bilder zur Auswahl. Die Bilder zeigen bewusst Landschaft und Symbole statt Hände oder Gesichter, die das Modell fehlerhaft zeichnet. Voraussetzungen siehe **Bildgenerierung**.
 
 ### Beispiele
 

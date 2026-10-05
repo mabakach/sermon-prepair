@@ -5,7 +5,7 @@ Hilf beim Vorbereiten eines reformierten Gottesdienstes. Nutze die MCP-Tools `ge
 ## Aufruf
 
 ```
-/gottesdienst <datum> [--ordnung de|ch] [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>] [--bild]
+/gottesdienst <datum> [--ordnung de|ch] [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>] [--bild] [--varianten <n>]
 ```
 
 - **datum**: Pflichtfeld. Format `YYYY-MM-DD` oder `DD.MM.YYYY`.
@@ -14,6 +14,7 @@ Hilf beim Vorbereiten eines reformierten Gottesdienstes. Nutze die MCP-Tools `ge
 - **--nt**: Optional. Eigene Bibelstelle für die Lesung Neues Testament.
 - **--predigttext**: Optional. Eigene Bibelstelle für den Predigttext.
 - **--bild**: Optional. Erzeugt lokal ein Bild zum Wochenspruch (siehe **Bild zum Wochenspruch**). Nur mit deutscher Ordnung.
+- **--varianten**: Optional, nur mit `--bild`. Anzahl Bildvarianten (2 bis 4, Standard 1); du wählst danach eine aus.
 
 Wenn das Datum im Format `DD.MM.YYYY` angegeben wurde, wandle es zunächst in `YYYY-MM-DD` um.
 
@@ -41,8 +42,14 @@ Die deutsche Ordnung liefert zusätzlich zu AT, NT (Epistel) und Predigttext das
 Nur bei `--bild` **und** deutscher Ordnung (Wochenspruch vorhanden). Sonst Hinweis im Chat (`--bild` braucht den Wochenspruch der deutschen Ordnung), kein Bild, Block entfernen.
 
 1. Nach dem Abruf der Bibeltexte und vor dem Schreiben der HTML-Datei.
-2. Formuliere einen **englischen** Bild-Prompt (1 bis 3 Sätze) aus Sinn und Bildwelt des Wochenspruchs. Stil: ruhige Aquarell-Illustration, warme, gedämpfte Farben, kontemplativ, für Gottesdienst-Blatt. **Kein Text, keine Schrift, keine Gesichter im Fokus, keine Jesus-Darstellung, keine Kreuz-Kitsch-Motive.** Beispiel (Jeremia 17,14): "Peaceful watercolor illustration of a healing hand reaching toward warm morning light over a quiet landscape, soft golden and blue tones, contemplative, church bulletin art, no text".
-3. Ruf `generate_image(prompt, output_path, width: 1024, height: 1024)` auf mit `output_path` = absoluter Pfad `<Ordner>/bild.png`. Der Aufruf dauert 2 bis 15 Minuten; weise vorher kurz darauf hin.
+2. Formuliere einen **englischen** Bild-Prompt (1 bis 3 Sätze) aus Sinn und Bildwelt des Wochenspruchs. Stil: ruhige Aquarell-Illustration, warme, gedämpfte Farben, kontemplativ, für Gottesdienst-Blatt.
+   - **Keine Hände, Finger, Arme oder Gesichter** als Motiv (das Modell zeichnet sie fehlerhaft, z.B. sechs Finger). Übersetze den Spruch stattdessen in Landschaft und Symbole: Licht durch Wolken, Weg, Baum, Wasser, offene Tür, Sonnenaufgang, Saat und Ernte, Brot, Lampe, Brücke. Falls Menschen unvermeidlich sind: kleine Silhouetten von hinten in der Ferne.
+   - Kein Text, keine Schrift, keine Jesus-Darstellung, keine Kreuz-Kitsch-Motive.
+   - Beispiel (Jeremia 17,14, Heilung): "Peaceful watercolor illustration of a quiet meadow at sunrise, warm golden light breaking through soft clouds over rolling hills, a single tree, soft golden and blue tones, contemplative, church bulletin art, no text, no people".
+3. Anzahl Varianten `n`: Standard 1, mit `--varianten <n>` 2 bis 4.
+   - `n = 1`: Ruf `generate_image(prompt, output_path, width: 1024, height: 1024, seed: 1)` auf mit `output_path` = absoluter Pfad `<Ordner>/bild.png`.
+   - `n > 1`: Ruf `generate_image` n-mal mit `seed` 1 bis n auf, `output_path` = `<Ordner>/bild-1.png` bis `bild-n.png`. Zeige alle Varianten (Read auf jede Datei) und frage, welche übernommen werden soll. Benenne die gewählte per Bash in `bild.png` um und lösche die übrigen.
+   - Jeder Aufruf dauert ca. 2 bis 15 Minuten; weise vorher kurz auf die Gesamtdauer hin.
 4. Schlägt der Aufruf fehl: Fehler im Chat nennen, ohne Bild weitermachen (Block entfernen). Meldet der Fehler Hugging Face / gated: Lizenz für `black-forest-labs/FLUX.2-klein-9B` akzeptieren und `hf auth login` ausführen.
 5. Der Ordner muss vor dem Aufruf nicht existieren (das Tool legt ihn an).
 
@@ -163,7 +170,7 @@ Ohne Sonntagsname (Fall B): `2026-06-25_Gottesdienst`
 
 ### Bild-Block
 
-Das Template enthält zwischen `<!-- BILD_START -->` und `<!-- BILD_END -->` das Bild (`bild.png`, relativ zur `index.html`).
+Das Template enthält zwischen `<!-- BILD_START -->` und `<!-- BILD_END -->` das Bild (`bild.png`, relativ zur `index.html`), direkt unter der Kopfzeile (Datum, Sonntagsname), vor dem Wochenspruch.
 - **Bild erzeugt**: nur die Kommentarzeilen entfernen.
 - **Sonst**: Block samt Inhalt komplett entfernen.
 
