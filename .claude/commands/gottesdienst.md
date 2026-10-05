@@ -31,7 +31,7 @@ Vor jedem `get_lectionary`-Aufruf (Fall A, und A/B in Fall C) muss die Ordnung f
 
 Übergib den Wert immer als Parameter `ordnung` an `get_lectionary`. Die Ordnung ist nur für diesen Aufruf relevant; frage pro Aufruf von `/gottesdienst` nur einmal.
 
-Die deutsche Ordnung liefert zusätzlich zu AT, NT (Epistel) und Predigttext auch das **Evangelium**. Zeige es in der Bestätigungsfrage informativ an (`Evangelium: [Stelle]`), es wird aber nicht ins HTML übernommen.
+Die deutsche Ordnung liefert zusätzlich zu AT, NT (Epistel) und Predigttext das **Evangelium**, den **Wochenspruch** (`wochenspruch.reference`, `wochenspruch.text`) und den **Wochenpsalm** (`wochenpsalm`). Zeige Evangelium, Wochenspruch und Wochenpsalm in der Bestätigungsfrage informativ an. Sie sind nicht austauschbar (keine eigenen Stellen) und werden bei Antwort B ebenfalls übernommen. Alle drei erscheinen **nur im HTML bei deutscher Ordnung**; bei schweizerischer Ordnung, Fall B und manueller Eingabe entfallen sie komplett.
 
 ---
 
@@ -90,7 +90,7 @@ Berechne den Wochentag (`new Date('YYYY-MM-DD').getDay()`, Sonntag = 0).
 
    Perikopen-Stellen ignorieren. Kein Badge für irgendeine Stelle.
 
-6. Ruf für alle drei Stellen `get_bible_text(reference)` auf.
+6. Ruf für alle drei Stellen `get_bible_text(reference)` auf. Bei deutscher Ordnung zusätzlich für Evangelium, Wochenpsalm und Wochenspruch (Fallback Wochenspruch: `wochenspruch.text` aus `get_lectionary`, falls Abruf scheitert).
 7. Erstelle Ordner und HTML-Datei (siehe **Datei-Ausgabe**).
 8. Gib das Ergebnis im Chat aus (siehe **Chat-Ausgabeformat**).
 
@@ -148,6 +148,12 @@ Ohne Sonntagsname (Fall B): `2026-06-25_Gottesdienst`
 2. Ersetze alle Platzhalter (siehe Tabelle unten).
 3. Schreibe das Ergebnis als `index.html` in den neu erstellten Ordner.
 
+### Nur-Deutsch-Blöcke
+
+Das Template enthält Blöcke zwischen `<!-- DE_ONLY_START -->` und `<!-- DE_ONLY_END -->` (Wochenspruch, Wochenpsalm, Evangelium).
+- **Deutsche Ordnung verwendet** (get_lectionary mit `ordnung: "de"`): nur die Kommentarzeilen entfernen, Inhalt behalten, Platzhalter befüllen.
+- **Sonst** (schweizerisch, Fall B, keine Perikopen-Abfrage): Block samt Inhalt komplett entfernen. Abschnitt darf nicht sichtbar sein.
+
 ### Platzhalter
 
 | Platzhalter | Inhalt |
@@ -166,6 +172,11 @@ Ohne Sonntagsname (Fall B): `2026-06-25_Gottesdienst`
 | `{{PREDIGTTEXT_REFERENCE}}` | Bibelstelle Predigttext oder `–` |
 | `{{PREDIGTTEXT_TEXT}}` | Bibeltext Predigttext oder `(keine Angabe)` |
 | `{{PREDIGTTEXT_BADGE}}` | Badge oder leer |
+| `{{WOCHENSPRUCH_REFERENCE}}` / `{{WOCHENSPRUCH_TEXT}}` | Nur DE: Stelle und Text des Wochenspruchs |
+| `{{WOCHENPSALM_REFERENCE}}` / `{{WOCHENPSALM_TEXT}}` | Nur DE: Stelle und Bibeltext des Wochenpsalms |
+| `{{EVANGELIUM_REFERENCE}}` / `{{EVANGELIUM_TEXT}}` | Nur DE: Stelle und Bibeltext des Evangeliums |
+| `{{EVANGELIUM_BADGE}}` | Nur DE: Badge `nach Perikopenordnung` (immer gesetzt) |
+| `{{PERIKOPEN_SOURCE}}` | `kirchenjahr-evangelisch.de` (de) oder `pfarrverein.ch` (ch/keine) |
 
 ### Farbtabelle (liturgische Farbe → CSS-Hex)
 
@@ -189,6 +200,8 @@ Leere Slots: `{{XX_REFERENCE}}` = `–`, `{{XX_TEXT}}` = `(keine Angabe)`, `{{XX
 ## Chat-Ausgabeformat
 
 ### Sonntag (Fall A)
+
+Bei deutscher Ordnung zusätzlich nach der Kopfzeile `### Wochenspruch – [Stelle]` und `### Wochenpsalm – [Stelle]` sowie `### Evangelium – [Stelle] *(nach Perikopenordnung)*` zwischen NT und Predigttext ausgeben (jeweils mit Text). Bei schweizerischer Ordnung entfallen diese.
 
 ```
 ## Gottesdienst [DD.MM.YYYY]

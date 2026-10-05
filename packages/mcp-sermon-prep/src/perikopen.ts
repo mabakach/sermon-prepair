@@ -9,6 +9,9 @@ export interface LectionaryResult {
   sunday_name: string;
   date: string;
   passages: Passage[];
+  /** Only set for the German order (kirchenjahr-evangelisch.de). */
+  wochenspruch?: { text: string; reference: string };
+  wochenpsalm?: string;
 }
 
 // The page uses a <table> where each Sunday spans multiple <tr> rows:
@@ -76,7 +79,28 @@ async function getLectionaryDe(date: string): Promise<LectionaryResult> {
     throw new Error(`Keine liturgischen Texte auf kirchenjahr-evangelisch.de/${slug}/ gefunden.`);
   }
 
-  return { sunday_name, date: targetDate, passages };
+  // Wochenspruch / Wochenpsalm: <h3 class="holiday-content-section-entry-headline"> followed by
+  // <div class="liturgical-text-subline"> inside the same container.
+  const subline = (label: string) => {
+    const h3 = page
+      .querySelectorAll('h3.holiday-content-section-entry-headline')
+      .find(h => h.text.trim() === label);
+    return h3?.parentNode.querySelector('.liturgical-text-subline');
+  };
+  const clean = (t: string) => t.replace(/\s+/g, ' ').trim().replace(/[\u2013\u2014]/g, '-');
+  const firstText = (el: ReturnType<typeof subline>) =>
+    clean(el?.querySelector('a span')?.childNodes[0]?.text ?? '');
+
+  let wochenspruch: LectionaryResult['wochenspruch'];
+  const spruchEl = subline('Wochenspruch');
+  if (spruchEl) {
+    const reference = firstText(spruchEl);
+    const full = clean(spruchEl.childNodes[0]?.text ?? '').replace(/\s*\|\s*$/, '');
+    if (full) wochenspruch = { text: full.replace(/^[\u201e"\u201c]+|[\u201c"\u201d]+$/g, ''), reference };
+  }
+  const wochenpsalm = firstText(subline('Wochenpsalm')) || undefined;
+
+  return { sunday_name, date: targetDate, passages, wochenspruch, wochenpsalm };
 }
 
 // Schweizer Perikopenordnung: pfarrverein.ch
