@@ -58,7 +58,8 @@ Die drei optionalen Flags entsprechen den Gottesdienst-Rollen:
 
 | Aufruf | Verhalten |
 |---|---|
-| `/gottesdienst 2026-06-28` | Sonntag, keine eigenen Stellen → alles aus Perikopen |
+| `/gottesdienst 2026-06-28` | Sonntag, keine eigenen Stellen → alles aus Perikopen (Frage nach Ordnung, Standard deutsch) |
+| `/gottesdienst 2026-06-28 --ordnung ch` | Schweizerische Perikopenordnung statt deutscher |
 | `/gottesdienst 28.06.2026` | Gleiches Ergebnis (DD.MM.YYYY wird automatisch umgewandelt) |
 | `/gottesdienst 2026-06-28 --predigttext "Lukas 6, 36-42"` | Sonntag: AT + NT aus Perikopen, eigener Predigttext |
 | `/gottesdienst 2026-06-28 --at "Amos 5, 21-24" --nt "Römer 6, 12-14" --predigttext "Matthäus 10, 24-33"` | Sonntag: alle drei eigene Stellen |
@@ -78,7 +79,8 @@ Wenn das Datum kein Sonntag ist und keine Stellen angegeben wurden, fragt der Sk
 ## Quellen
 
 - **Kirchenjahr**: [kirchenjahr-evangelisch.de](https://kirchenjahr-evangelisch.de/) – Sonntagsname und liturgische Farbe
-- **Perikopen**: [pfarrverein.ch/perikopen](https://www.pfarrverein.ch/perikopen/) – Reformierte Perikopenordnung
+- **Perikopen (deutsch, Standard)**: [kirchenjahr-evangelisch.de](https://kirchenjahr-evangelisch.de/) – Detailseite des Sonntags
+- **Perikopen (schweizerisch)**: [pfarrverein.ch/perikopen](https://www.pfarrverein.ch/perikopen/) – Reformierte Perikopenordnung
 - **Bibel**: [bibleserver.com/ZB](https://www.bibleserver.com/ZB) – Zürcherbibel
 
 ## Projektstruktur
@@ -93,7 +95,7 @@ sermon-prepair/
 │       └── src/
 │           ├── index.ts           # MCP-Einstiegspunkt
 │           ├── kirchenjahr.ts     # Scraper kirchenjahr-evangelisch.de
-│           ├── perikopen.ts       # Scraper pfarrverein.ch
+│           ├── perikopen.ts       # Scraper kirchenjahr-evangelisch.de (de) + pfarrverein.ch (ch)
 │           └── bibleserver.ts     # Scraper bibleserver.com/ZB
 └── package.json                   # Monorepo-Root (npm workspaces)
 ```

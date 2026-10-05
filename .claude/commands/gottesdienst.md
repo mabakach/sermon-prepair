@@ -5,15 +5,33 @@ Hilf beim Vorbereiten eines reformierten Gottesdienstes. Nutze die MCP-Tools `ge
 ## Aufruf
 
 ```
-/gottesdienst <datum> [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>]
+/gottesdienst <datum> [--ordnung de|ch] [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>]
 ```
 
 - **datum**: Pflichtfeld. Format `YYYY-MM-DD` oder `DD.MM.YYYY`.
+- **--ordnung**: Optional. `de` = deutsche Perikopenordnung (kirchenjahr-evangelisch.de, **Standard**), `ch` = schweizerische Perikopenordnung (pfarrverein.ch). Fehlt das Flag, frage vor der Perikopen-Abfrage nach (siehe **Perikopenordnung wählen**).
 - **--at**: Optional. Eigene Bibelstelle für die Lesung Altes Testament.
 - **--nt**: Optional. Eigene Bibelstelle für die Lesung Neues Testament.
 - **--predigttext**: Optional. Eigene Bibelstelle für den Predigttext.
 
 Wenn das Datum im Format `DD.MM.YYYY` angegeben wurde, wandle es zunächst in `YYYY-MM-DD` um.
+
+---
+
+## Perikopenordnung wählen
+
+Vor jedem `get_lectionary`-Aufruf (Fall A, und A/B in Fall C) muss die Ordnung feststehen. Wurde `--ordnung` nicht übergeben und sind nicht alle drei Bibelstellen als Flags angegeben, frage:
+
+> Welche Perikopenordnung soll verwendet werden?
+> **A)** Deutsche Perikopenordnung *(Standard, Enter)*
+> **B)** Schweizerische Perikopenordnung
+
+- A oder leeres Enter → `ordnung: "de"`
+- B → `ordnung: "ch"`
+
+Übergib den Wert immer als Parameter `ordnung` an `get_lectionary`. Die Ordnung ist nur für diesen Aufruf relevant; frage pro Aufruf von `/gottesdienst` nur einmal.
+
+Die deutsche Ordnung liefert zusätzlich zu AT, NT (Epistel) und Predigttext auch das **Evangelium**. Zeige es in der Bestätigungsfrage informativ an (`Evangelium: [Stelle]`), es wird aber nicht ins HTML übernommen.
 
 ---
 
@@ -37,13 +55,13 @@ Berechne den Wochentag (`new Date('YYYY-MM-DD').getDay()`, Sonntag = 0).
 
 ### Fall A: Datum ist ein Sonntag
 
-1. Ruf `get_lectionary(date)` auf → liefert `sunday_name` und drei Perikopen-Stellen.
+1. Ruf `get_lectionary(date, ordnung)` auf → liefert `sunday_name` und die Perikopen-Stellen.
 2. Ruf `get_church_calendar(date, sunday_name)` auf → liefert `liturgical_color` und `liturgical_season`.
 3. **Wurden KEINE eigenen Bibelstellen als Parameter übergeben?**
 
    Zeige dem Benutzer die Perikopen und frage nach:
 
-   > Die Perikopenordnung für **[Sonntagsname]** ([DD.MM.YYYY]):
+   > Die [deutsche|schweizerische] Perikopenordnung für **[Sonntagsname]** ([DD.MM.YYYY]):
    >
    > - **Lesung AT**: [AT-Stelle]
    > - **Lesung NT**: [NT-Stelle]
@@ -104,7 +122,7 @@ Frage den Benutzer:
 > B) Perikopen des **nächsten Sonntags** (DD.MM.YYYY) verwenden
 > C) Bibelstellen manuell eingeben
 
-- **A/B**: Führe Fall A mit dem gewählten Sonntag aus (keine eigenen Flags → Perikopen-Abfrage mit Bestätigung).
+- **A/B**: Führe Fall A mit dem gewählten Sonntag aus (inkl. Wahl der Perikopenordnung) (keine eigenen Flags → Perikopen-Abfrage mit Bestätigung).
 - **C**: Frage der Reihe nach nach AT, NT und Predigttext (jeweils optional), dann Fall B.
 
 ---

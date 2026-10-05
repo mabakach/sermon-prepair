@@ -12,8 +12,9 @@ function buildUrl(reference: string): string {
   const m = reference.match(/^((?:[1-9]\.\s*)?[A-ZÄÖÜ][a-zäöüß]+(?:\s[A-ZÄÖÜ][a-zäöüß]+)?)\s+(.+)$/);
   if (!m) throw new Error(`Konnte Bibelstelle nicht parsen: "${reference}"`);
 
-  const book = m[1].trim().replace(/\s+/g, '+');
+  const book = m[1].trim().replace(/^([1-9])\.\s*/, '$1.').replace(/\s+/g, '+');
   const verseRef = m[2]
+    .replace(/[\u2013\u2014]/g, '-')
     .replace(/\s*,\s*/g, ',')
     .replace(/\s*-\s*/g, '-')
     .replace(/\s*\.\s*/g, '.')

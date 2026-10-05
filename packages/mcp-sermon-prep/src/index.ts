@@ -38,14 +38,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'get_lectionary',
       description:
-        'Holt die Perikopenordnung (AT, Epistel, Evangelium) für einen Sonntag von pfarrverein.ch. ' +
-        'Gibt auch den Sonntagsnamen zurück.',
+        'Holt die Perikopenordnung für einen Sonntag. Standard: deutsche Ordnung ' +
+        '(kirchenjahr-evangelisch.de: AT, Epistel, Evangelium, Predigttext); ' +
+        'alternativ schweizerische Ordnung (pfarrverein.ch). Gibt auch den Sonntagsnamen zurück.',
       inputSchema: {
         type: 'object',
         properties: {
           date: {
             type: 'string',
             description: 'Datum eines Sonntags im Format YYYY-MM-DD',
+          },
+          ordnung: {
+            type: 'string',
+            enum: ['de', 'ch'],
+            description: 'Perikopenordnung: "de" = deutsch (Standard), "ch" = schweizerisch',
           },
         },
         required: ['date'],
@@ -75,7 +81,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     if (name === 'get_lectionary') {
-      const result = await getLectionary(args!.date as string);
+      const result = await getLectionary(
+        args!.date as string,
+        args!.ordnung === 'ch' ? 'ch' : 'de'
+      );
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
 
