@@ -46,12 +46,15 @@ Nur bei `--bild` **und** deutscher Ordnung (Wochenspruch vorhanden). Sonst Hinwe
    - **Keine Hände, Finger, Arme oder Gesichter** als Motiv (das Modell zeichnet sie fehlerhaft, z.B. sechs Finger). Übersetze den Spruch stattdessen in Landschaft und Symbole: Licht durch Wolken, Weg, Baum, Wasser, offene Tür, Sonnenaufgang, Saat und Ernte, Brot, Lampe, Brücke. Falls Menschen unvermeidlich sind: kleine Silhouetten von hinten in der Ferne.
    - Kein Text, keine Schrift, keine Jesus-Darstellung, keine Kreuz-Kitsch-Motive.
    - Beispiel (Jeremia 17,14, Heilung): "Peaceful watercolor illustration of a quiet meadow at sunrise, warm golden light breaking through soft clouds over rolling hills, a single tree, soft golden and blue tones, contemplative, church bulletin art, no text, no people".
-3. Anzahl Varianten `n`: Standard 1, mit `--varianten <n>` 2 bis 4.
-   - `n = 1`: Ruf `generate_image(prompt, output_path, width: 1024, height: 1024, seed: 1)` auf mit `output_path` = absoluter Pfad `<Ordner>/bild.png`.
+3. Format **16:9** (Beamer): immer `width: 1920, height: 1080`.
+   Anzahl Varianten `n`: Standard 1, mit `--varianten <n>` 2 bis 4.
+   - `n = 1`: Ruf `generate_image(prompt, output_path, width: 1920, height: 1080, seed: 1)` auf mit `output_path` = absoluter Pfad `<Ordner>/bild.png`.
    - `n > 1`: Ruf `generate_image` n-mal mit `seed` 1 bis n auf, `output_path` = `<Ordner>/bild-1.png` bis `bild-n.png`. Zeige alle Varianten (Read auf jede Datei) und frage, welche übernommen werden soll. Benenne die gewählte per Bash in `bild.png` um und lösche die übrigen.
-   - Jeder Aufruf dauert ca. 2 bis 15 Minuten; weise vorher kurz auf die Gesamtdauer hin.
-4. Schlägt der Aufruf fehl: Fehler im Chat nennen, ohne Bild weitermachen (Block entfernen). Meldet der Fehler Hugging Face / gated: Lizenz für `black-forest-labs/FLUX.2-klein-9B` akzeptieren und `hf auth login` ausführen.
-5. Der Ordner muss vor dem Aufruf nicht existieren (das Tool legt ihn an).
+   - Jeder Aufruf dauert mehrere Minuten (16:9 in voller Auflösung braucht länger als ein Quadrat); weise vorher kurz auf die Gesamtdauer hin.
+   - Prompt bei 16:9: ergänze "wide cinematic landscape, calm open sky" (ruhige Fläche für den Text).
+4. **Text ins Bild:** Ruf `add_text_to_image(input_path: <Ordner>/bild.png, output_path: <Ordner>/bild-text.png, text: wochenspruch.text, reference: wochenspruch.reference)` auf. Das Tool wählt oben oder unten selbst. `bild.png` bleibt ohne Text erhalten, `bild-text.png` enthält den Wochenspruch. Beide Dateien werden gespeichert und im HTML eingebunden. Zeige `bild-text.png` (Read) und biete bei Problemen (z.B. Text verdeckt Motiv) `position: "top"` oder `"bottom"` zum erneuten Aufruf an.
+5. Schlägt der Aufruf fehl: Fehler im Chat nennen, ohne Bild weitermachen (Block entfernen). Meldet der Fehler Hugging Face / gated: Lizenz für `black-forest-labs/FLUX.2-klein-9B` akzeptieren und `hf auth login` ausführen.
+6. Der Ordner muss vor dem Aufruf nicht existieren (das Tool legt ihn an).
 
 ---
 
@@ -170,7 +173,7 @@ Ohne Sonntagsname (Fall B): `2026-06-25_Gottesdienst`
 
 ### Bild-Block
 
-Das Template enthält zwischen `<!-- BILD_START -->` und `<!-- BILD_END -->` das Bild (`bild.png`, relativ zur `index.html`), direkt unter der Kopfzeile (Datum, Sonntagsname), vor dem Wochenspruch.
+Das Template enthält zwischen `<!-- BILD_START -->` und `<!-- BILD_END -->` die Bilder (`bild-text.png` mit Wochenspruch und `bild.png` ohne Text, relativ zur `index.html`), direkt unter der Kopfzeile (Datum, Sonntagsname), vor dem Wochenspruch.
 - **Bild erzeugt**: nur die Kommentarzeilen entfernen.
 - **Sonst**: Block samt Inhalt komplett entfernen.
 
@@ -227,7 +230,7 @@ Leere Slots: `{{XX_REFERENCE}}` = `–`, `{{XX_TEXT}}` = `(keine Angabe)`, `{{XX
 
 ### Sonntag (Fall A)
 
-Wurde ein Bild erzeugt, gib nach der Kopfzeile `🖼️ Bild: [Ordnerpfad]/bild.png` aus. Bei deutscher Ordnung zusätzlich nach der Kopfzeile `### Wochenspruch – [Stelle]` und `### Wochenpsalm – [Stelle]` sowie `### Evangelium – [Stelle] *(nach Perikopenordnung)*` zwischen NT und Predigttext ausgeben (jeweils mit Text). Bei schweizerischer Ordnung entfallen diese.
+Wurde ein Bild erzeugt, gib nach der Kopfzeile `🖼️ Bild: [Ordnerpfad]/bild-text.png` (mit Text) und `bild.png` (ohne Text) aus. Bei deutscher Ordnung zusätzlich nach der Kopfzeile `### Wochenspruch – [Stelle]` und `### Wochenpsalm – [Stelle]` sowie `### Evangelium – [Stelle] *(nach Perikopenordnung)*` zwischen NT und Predigttext ausgeben (jeweils mit Text). Bei schweizerischer Ordnung entfallen diese.
 
 ```
 ## Gottesdienst [DD.MM.YYYY]

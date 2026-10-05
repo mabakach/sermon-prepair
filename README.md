@@ -54,7 +54,7 @@ Die drei optionalen Flags entsprechen den Gottesdienst-Rollen:
 | `--nt` | Lesung Neues Testament | `--nt "Römer 6, 12-14"` |
 | `--predigttext` | Predigttext | `--predigttext "Matthäus 10, 24-33"` |
 
-Zusätzlich erzeugt `--bild` (nur deutsche Ordnung) ein passendes Bild zum Wochenspruch, lokal mit FLUX.2 Klein 9B. Es wird als `bild.png` im Ordner gespeichert und oben im HTML eingebunden. Mit `--varianten <n>` (2 bis 4) entstehen mehrere Bilder zur Auswahl. Die Bilder zeigen bewusst Landschaft und Symbole statt Hände oder Gesichter, die das Modell fehlerhaft zeichnet. Voraussetzungen siehe **Bildgenerierung**.
+Zusätzlich erzeugt `--bild` (nur deutsche Ordnung) ein passendes Bild zum Wochenspruch, lokal mit FLUX.2 Klein 9B. Das Bild hat das Format 16:9 (Beamer) und wird zweimal gespeichert und im HTML eingebunden: `bild-text.png` mit eingebranntem Wochenspruch (Pillow, Position automatisch oben oder unten) und `bild.png` ohne Text. Mit `--varianten <n>` (2 bis 4) entstehen mehrere Bilder zur Auswahl. Die Bilder zeigen bewusst Landschaft und Symbole statt Hände oder Gesichter, die das Modell fehlerhaft zeichnet. Voraussetzungen siehe **Bildgenerierung**.
 
 ### Beispiele
 

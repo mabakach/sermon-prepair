@@ -153,7 +153,8 @@
 
     /* ── Bild ────────────────────────────────────────────── */
     .illustration { margin: 0 0 2rem; }
-    .illustration img { display: block; width: 100%; height: auto; border-radius: 4px; }
+    .illustration img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; }
+    .illustration figcaption { margin-top: 0.4rem; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.75rem; color: #999; }
 
     /* ── Footer ──────────────────────────────────────────── */
     footer {
@@ -169,7 +170,7 @@
     @media print {
       body { background: #fff; font-size: 11pt; }
       .page { padding: 1.5cm 2cm; max-width: 100%; }
-      .passage { page-break-inside: avoid; }
+      .passage, .illustration { page-break-inside: avoid; }
       header { border-top-width: 4px; }
     }
   </style>
@@ -191,7 +192,12 @@
 
   <!-- BILD_START -->
   <figure class="illustration">
-    <img src="bild.png" alt="Bild zum Wochenspruch {{WOCHENSPRUCH_REFERENCE}}">
+    <img src="bild-text.png" alt="Bild zum Wochenspruch {{WOCHENSPRUCH_REFERENCE}}, mit Text">
+    <figcaption>Mit Wochenspruch (bild-text.png)</figcaption>
+  </figure>
+  <figure class="illustration">
+    <img src="bild.png" alt="Bild zum Wochenspruch {{WOCHENSPRUCH_REFERENCE}}, ohne Text">
+    <figcaption>Ohne Text (bild.png)</figcaption>
   </figure>
   <!-- BILD_END -->
 

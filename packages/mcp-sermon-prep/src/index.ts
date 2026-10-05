@@ -7,7 +7,7 @@ import {
 import { getLectionary } from './perikopen.js';
 import { getChurchCalendar } from './kirchenjahr.js';
 import { getBibleText } from './bibleserver.js';
-import { generateImage } from './imagegen.js';
+import { generateImage, overlayText } from './imagegen.js';
 
 const server = new Server(
   { name: 'sermon-prep', version: '1.0.0' },
@@ -84,11 +84,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         properties: {
           prompt: { type: 'string', description: 'Bildbeschreibung (Englisch liefert die besten Ergebnisse)' },
           output_path: { type: 'string', description: 'Absoluter Zielpfad der PNG-Datei' },
-          width: { type: 'number', description: 'Breite in Pixel (Standard 1024)' },
-          height: { type: 'number', description: 'Höhe in Pixel (Standard 1024)' },
+          width: { type: 'number', description: 'Breite in Pixel (Standard 1920)' },
+          height: { type: 'number', description: 'Höhe in Pixel (Standard 1080, 16:9)' },
           seed: { type: 'number', description: 'Optionaler Seed für reproduzierbare Bilder' },
         },
         required: ['prompt', 'output_path'],
+      },
+    },
+    {
+      name: 'add_text_to_image',
+      description:
+        'Brennt einen Text (z.B. Wochenspruch) mit Bibelstelle ins Bild ein und speichert ein neues PNG. ' +
+        'Wählt automatisch das ruhigere Bilddrittel (oben/unten) und legt einen dunklen Verlauf unter den Text. ' +
+        'Das Originalbild bleibt unverändert.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          input_path: { type: 'string', description: 'Absoluter Pfad des Quellbilds' },
+          output_path: { type: 'string', description: 'Absoluter Pfad des Ausgabebilds' },
+          text: { type: 'string', description: 'Text, z.B. der Wochenspruch (ohne Anführungszeichen)' },
+          reference: { type: 'string', description: 'Bibelstelle, z.B. "Jeremia 17, 14"' },
+          position: { type: 'string', enum: ['auto', 'top', 'bottom'], description: 'Textposition (Standard auto)' },
+        },
+        required: ['input_path', 'output_path', 'text'],
       },
     },
   ],
@@ -126,6 +144,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         args!.width as number | undefined,
         args!.height as number | undefined,
         args!.seed as number | undefined
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+
+    if (name === 'add_text_to_image') {
+      const result = await overlayText(
+        args!.input_path as string,
+        args!.output_path as string,
+        args!.text as string,
+        args!.reference as string | undefined,
+        (args!.position as 'auto' | 'top' | 'bottom' | undefined) ?? 'auto'
       );
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
