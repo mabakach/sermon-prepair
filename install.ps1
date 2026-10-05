@@ -34,7 +34,7 @@ Write-Host "sermon-prepair – Gottesdienst-Vorbereitung" -ForegroundColor White
 Write-Host "Installationsverzeichnis: $RepoDir" -ForegroundColor Cyan
 
 # ── 1. Voraussetzungen ───────────────────────────────────────────────────────
-Write-Step "1/4  Voraussetzungen prüfen"
+Write-Step "1/5  Voraussetzungen prüfen"
 
 # Node.js >= 18
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
@@ -72,7 +72,7 @@ if ($claudeCmd) {
 }
 
 # ── 2. Abhängigkeiten ────────────────────────────────────────────────────────
-Write-Step "2/4  npm-Abhängigkeiten installieren / aktualisieren"
+Write-Step "2/5  npm-Abhängigkeiten installieren / aktualisieren"
 
 Set-Location $RepoDir
 Write-Info "npm install ..."
@@ -81,7 +81,7 @@ if ($LASTEXITCODE -ne 0) { Write-Fail "npm install fehlgeschlagen." }
 Write-Ok "Abhängigkeiten aktuell"
 
 # ── 3. MCP-Server bauen ──────────────────────────────────────────────────────
-Write-Step "3/4  MCP-Server kompilieren"
+Write-Step "3/5  MCP-Server kompilieren"
 
 Write-Info "npm run build ..."
 npm run build
@@ -89,7 +89,7 @@ if ($LASTEXITCODE -ne 0) { Write-Fail "Build fehlgeschlagen." }
 Write-Ok "Build erfolgreich -> $McpJs"
 
 # ── 4. Claude-Integration ────────────────────────────────────────────────────
-Write-Step "4/4  Claude-Integration einrichten"
+Write-Step "4/5  Claude-Integration einrichten"
 
 # Verzeichnis anlegen
 New-Item -ItemType Directory -Force -Path $CommandsDir | Out-Null
@@ -112,6 +112,10 @@ claude mcp remove --scope user sermon-prep 2>$null
 claude mcp add --scope user sermon-prep -- $NodeBin $McpJs
 if ($LASTEXITCODE -ne 0) { Write-Fail "claude mcp add fehlgeschlagen." }
 Write-Ok "MCP registriert (Scope: user)"
+
+# ── 5. Bildgenerierung ───────────────────────────────────────────────────────
+Write-Step "5/5  Bildgenerierung (optional, für --bild)"
+Write-Info "Bildgenerierung (--bild) ist unter Windows nicht verfügbar (nur macOS mit Apple Silicon)."
 
 # ── Fertig ───────────────────────────────────────────────────────────────────
 Write-Host ""

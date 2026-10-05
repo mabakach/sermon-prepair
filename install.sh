@@ -23,7 +23,7 @@ echo -e "${BOLD}sermon-prepair – Gottesdienst-Vorbereitung${NC}"
 echo -e "Installationsverzeichnis: ${BLUE}$REPO_DIR${NC}"
 
 # ── 1. Voraussetzungen ───────────────────────────────────────────────────────
-step "1/4  Voraussetzungen prüfen"
+step "1/5  Voraussetzungen prüfen"
 
 # Node.js ≥ 18
 if ! command -v node &>/dev/null; then
@@ -56,7 +56,7 @@ else
 fi
 
 # ── 2. Abhängigkeiten ────────────────────────────────────────────────────────
-step "2/4  npm-Abhängigkeiten installieren / aktualisieren"
+step "2/5  npm-Abhängigkeiten installieren / aktualisieren"
 
 cd "$REPO_DIR"
 info "npm install …"
@@ -64,14 +64,14 @@ npm install
 ok "Abhängigkeiten aktuell"
 
 # ── 3. MCP-Server bauen ──────────────────────────────────────────────────────
-step "3/4  MCP-Server kompilieren"
+step "3/5  MCP-Server kompilieren"
 
 info "npm run build …"
 npm run build
 ok "Build erfolgreich → $MCP_JS"
 
 # ── 4. Claude-Integration ────────────────────────────────────────────────────
-step "4/4  Claude-Integration einrichten"
+step "4/5  Claude-Integration einrichten"
 
 mkdir -p "$COMMANDS_DIR"
 
@@ -87,6 +87,39 @@ info "MCP-Server registrieren …"
 claude mcp remove --scope user sermon-prep 2>/dev/null || true
 claude mcp add --scope user sermon-prep -- "$NODE_BIN" "$MCP_JS"
 ok "MCP registriert (Scope: user)"
+
+# ── 5. Bildgenerierung (optional) ────────────────────────────────────────────
+step "5/5  Bildgenerierung prüfen (optional, für --bild)"
+
+if [ "$(uname -s)" != "Darwin" ] || [ "$(uname -m)" != "arm64" ]; then
+  info "Bildgenerierung (--bild) ist nur auf macOS mit Apple Silicon verfügbar – übersprungen."
+else
+  MFLUX_FOUND="${MFLUX_BIN:-}"
+  if [ -z "$MFLUX_FOUND" ]; then
+    if command -v mflux-generate-flux2 &>/dev/null; then
+      MFLUX_FOUND="$(command -v mflux-generate-flux2)"
+    elif [ -x "$HOME/.local/bin/mflux-generate-flux2" ]; then
+      MFLUX_FOUND="$HOME/.local/bin/mflux-generate-flux2"
+    fi
+  fi
+
+  if [ -n "$MFLUX_FOUND" ] && [ -x "$MFLUX_FOUND" ]; then
+    ok "mflux gefunden ($MFLUX_FOUND)"
+  else
+    warn "mflux nicht gefunden – /gottesdienst --bild funktioniert erst nach der Installation:"
+    warn "  brew install uv && uv tool install --upgrade mflux && uv tool update-shell"
+  fi
+
+  if [ -n "${HF_TOKEN:-}" ] || [ -s "$HOME/.cache/huggingface/token" ] || [ -s "$HOME/.huggingface/token" ]; then
+    ok "Hugging Face-Login vorhanden"
+  else
+    warn "Kein Hugging Face-Login gefunden. FLUX.2 Klein 9B ist lizenzpflichtig:"
+    warn "  1. Lizenz akzeptieren: https://huggingface.co/black-forest-labs/FLUX.2-klein-9B"
+    warn "  2. Read-Token erstellen: https://huggingface.co/settings/tokens"
+    warn "  3. uvx --from huggingface_hub hf auth login"
+  fi
+  info "Der erste Lauf lädt mehrere GB Modellgewichte (Peak-RAM ca. 20 GB, empfohlen: 32 GB)."
+fi
 
 # ── Fertig ───────────────────────────────────────────────────────────────────
 echo ""

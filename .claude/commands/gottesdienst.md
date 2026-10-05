@@ -5,7 +5,7 @@ Hilf beim Vorbereiten eines reformierten Gottesdienstes. Nutze die MCP-Tools `ge
 ## Aufruf
 
 ```
-/gottesdienst <datum> [--ordnung de|ch] [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>]
+/gottesdienst <datum> [--ordnung de|ch] [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>] [--bild]
 ```
 
 - **datum**: Pflichtfeld. Format `YYYY-MM-DD` oder `DD.MM.YYYY`.
@@ -13,6 +13,7 @@ Hilf beim Vorbereiten eines reformierten Gottesdienstes. Nutze die MCP-Tools `ge
 - **--at**: Optional. Eigene Bibelstelle für die Lesung Altes Testament.
 - **--nt**: Optional. Eigene Bibelstelle für die Lesung Neues Testament.
 - **--predigttext**: Optional. Eigene Bibelstelle für den Predigttext.
+- **--bild**: Optional. Erzeugt lokal ein Bild zum Wochenspruch (siehe **Bild zum Wochenspruch**). Nur mit deutscher Ordnung.
 
 Wenn das Datum im Format `DD.MM.YYYY` angegeben wurde, wandle es zunächst in `YYYY-MM-DD` um.
 
@@ -32,6 +33,18 @@ Vor jedem `get_lectionary`-Aufruf (Fall A, und A/B in Fall C) muss die Ordnung f
 Übergib den Wert immer als Parameter `ordnung` an `get_lectionary`. Die Ordnung ist nur für diesen Aufruf relevant; frage pro Aufruf von `/gottesdienst` nur einmal.
 
 Die deutsche Ordnung liefert zusätzlich zu AT, NT (Epistel) und Predigttext das **Evangelium**, den **Wochenspruch** (`wochenspruch.reference`, `wochenspruch.text`) und den **Wochenpsalm** (`wochenpsalm`). Zeige Evangelium, Wochenspruch und Wochenpsalm in der Bestätigungsfrage informativ an. Sie sind nicht austauschbar (keine eigenen Stellen) und werden bei Antwort B ebenfalls übernommen. Alle drei erscheinen **nur im HTML bei deutscher Ordnung**; bei schweizerischer Ordnung, Fall B und manueller Eingabe entfallen sie komplett.
+
+---
+
+## Bild zum Wochenspruch
+
+Nur bei `--bild` **und** deutscher Ordnung (Wochenspruch vorhanden). Sonst Hinweis im Chat (`--bild` braucht den Wochenspruch der deutschen Ordnung), kein Bild, Block entfernen.
+
+1. Nach dem Abruf der Bibeltexte und vor dem Schreiben der HTML-Datei.
+2. Formuliere einen **englischen** Bild-Prompt (1 bis 3 Sätze) aus Sinn und Bildwelt des Wochenspruchs. Stil: ruhige Aquarell-Illustration, warme, gedämpfte Farben, kontemplativ, für Gottesdienst-Blatt. **Kein Text, keine Schrift, keine Gesichter im Fokus, keine Jesus-Darstellung, keine Kreuz-Kitsch-Motive.** Beispiel (Jeremia 17,14): "Peaceful watercolor illustration of a healing hand reaching toward warm morning light over a quiet landscape, soft golden and blue tones, contemplative, church bulletin art, no text".
+3. Ruf `generate_image(prompt, output_path, width: 1024, height: 1024)` auf mit `output_path` = absoluter Pfad `<Ordner>/bild.png`. Der Aufruf dauert 2 bis 15 Minuten; weise vorher kurz darauf hin.
+4. Schlägt der Aufruf fehl: Fehler im Chat nennen, ohne Bild weitermachen (Block entfernen). Meldet der Fehler Hugging Face / gated: Lizenz für `black-forest-labs/FLUX.2-klein-9B` akzeptieren und `hf auth login` ausführen.
+5. Der Ordner muss vor dem Aufruf nicht existieren (das Tool legt ihn an).
 
 ---
 
@@ -148,6 +161,12 @@ Ohne Sonntagsname (Fall B): `2026-06-25_Gottesdienst`
 2. Ersetze alle Platzhalter (siehe Tabelle unten).
 3. Schreibe das Ergebnis als `index.html` in den neu erstellten Ordner.
 
+### Bild-Block
+
+Das Template enthält zwischen `<!-- BILD_START -->` und `<!-- BILD_END -->` das Bild (`bild.png`, relativ zur `index.html`).
+- **Bild erzeugt**: nur die Kommentarzeilen entfernen.
+- **Sonst**: Block samt Inhalt komplett entfernen.
+
 ### Nur-Deutsch-Blöcke
 
 Das Template enthält Blöcke zwischen `<!-- DE_ONLY_START -->` und `<!-- DE_ONLY_END -->` (Wochenspruch, Wochenpsalm, Evangelium).
@@ -201,7 +220,7 @@ Leere Slots: `{{XX_REFERENCE}}` = `–`, `{{XX_TEXT}}` = `(keine Angabe)`, `{{XX
 
 ### Sonntag (Fall A)
 
-Bei deutscher Ordnung zusätzlich nach der Kopfzeile `### Wochenspruch – [Stelle]` und `### Wochenpsalm – [Stelle]` sowie `### Evangelium – [Stelle] *(nach Perikopenordnung)*` zwischen NT und Predigttext ausgeben (jeweils mit Text). Bei schweizerischer Ordnung entfallen diese.
+Wurde ein Bild erzeugt, gib nach der Kopfzeile `🖼️ Bild: [Ordnerpfad]/bild.png` aus. Bei deutscher Ordnung zusätzlich nach der Kopfzeile `### Wochenspruch – [Stelle]` und `### Wochenpsalm – [Stelle]` sowie `### Evangelium – [Stelle] *(nach Perikopenordnung)*` zwischen NT und Predigttext ausgeben (jeweils mit Text). Bei schweizerischer Ordnung entfallen diese.
 
 ```
 ## Gottesdienst [DD.MM.YYYY]

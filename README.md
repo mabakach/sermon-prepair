@@ -43,7 +43,7 @@ Starte Claude Code nach der Installation neu (oder führe `/reload` aus).
 ## Verwendung
 
 ```
-/gottesdienst <datum> [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>]
+/gottesdienst <datum> [--at <stelle>] [--nt <stelle>] [--predigttext <stelle>] [--bild]
 ```
 
 Die drei optionalen Flags entsprechen den Gottesdienst-Rollen:
@@ -53,6 +53,8 @@ Die drei optionalen Flags entsprechen den Gottesdienst-Rollen:
 | `--at` | Lesung Altes Testament | `--at "Jeremia 26, 1-15"` |
 | `--nt` | Lesung Neues Testament | `--nt "Römer 6, 12-14"` |
 | `--predigttext` | Predigttext | `--predigttext "Matthäus 10, 24-33"` |
+
+Zusätzlich erzeugt `--bild` (nur deutsche Ordnung) ein passendes Bild zum Wochenspruch, lokal mit FLUX.2 Klein 9B. Es wird als `bild.png` im Ordner gespeichert und oben im HTML eingebunden. Voraussetzungen siehe **Bildgenerierung**.
 
 ### Beispiele
 
@@ -76,6 +78,18 @@ Wenn das Datum kein Sonntag ist und keine Stellen angegeben wurden, fragt der Sk
 - **B** – Perikopen des nächsten Sonntags verwenden
 - **C** – Bibelstellen manuell eingeben
 
+## Bildgenerierung (optional)
+
+Nur macOS mit Apple Silicon, empfohlen ab 32 GB RAM. Unter Windows und Linux ist `--bild` nicht verfügbar. `install.sh` prüft auf macOS, ob mflux und ein Hugging Face-Login vorhanden sind, und weist sonst darauf hin.
+
+```bash
+brew install uv
+uv tool install --upgrade mflux
+uv tool update-shell
+```
+
+FLUX.2 Klein 9B ist bei Hugging Face lizenzpflichtig: Lizenz auf [huggingface.co/black-forest-labs/FLUX.2-klein-9B](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B) akzeptieren, Read-Token erstellen und `uvx --from huggingface_hub hf auth login` ausführen. Der erste Lauf lädt mehrere GB Gewichte. Eine Generierung dauert danach ca. 2 Minuten (Peak-RAM ca. 20 GB). Eigenes Binary: Umgebungsvariable `MFLUX_BIN`.
+
 ## Quellen
 
 - **Kirchenjahr**: [kirchenjahr-evangelisch.de](https://kirchenjahr-evangelisch.de/) – Sonntagsname und liturgische Farbe
@@ -96,6 +110,7 @@ sermon-prepair/
 │           ├── index.ts           # MCP-Einstiegspunkt
 │           ├── kirchenjahr.ts     # Scraper kirchenjahr-evangelisch.de
 │           ├── perikopen.ts       # Scraper kirchenjahr-evangelisch.de (de) + pfarrverein.ch (ch)
-│           └── bibleserver.ts     # Scraper bibleserver.com/ZB
+│           ├── bibleserver.ts     # Scraper bibleserver.com/ZB
+│           └── imagegen.ts        # Bildgenerierung (mflux, FLUX.2 Klein 9B)
 └── package.json                   # Monorepo-Root (npm workspaces)
 ```

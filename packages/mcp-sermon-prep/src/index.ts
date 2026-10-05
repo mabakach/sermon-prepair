@@ -7,6 +7,7 @@ import {
 import { getLectionary } from './perikopen.js';
 import { getChurchCalendar } from './kirchenjahr.js';
 import { getBibleText } from './bibleserver.js';
+import { generateImage } from './imagegen.js';
 
 const server = new Server(
   { name: 'sermon-prep', version: '1.0.0' },
@@ -73,6 +74,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['reference'],
       },
     },
+    {
+      name: 'generate_image',
+      description:
+        'Erzeugt lokal ein Bild (FLUX.2 Klein 9B via mflux, nur macOS/Apple Silicon) und speichert es als PNG. ' +
+        'Dauert je nach Rechner 2 bis 15 Minuten; beim ersten Lauf werden mehrere GB Modellgewichte geladen.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Bildbeschreibung (Englisch liefert die besten Ergebnisse)' },
+          output_path: { type: 'string', description: 'Absoluter Zielpfad der PNG-Datei' },
+          width: { type: 'number', description: 'Breite in Pixel (Standard 1024)' },
+          height: { type: 'number', description: 'Höhe in Pixel (Standard 1024)' },
+          seed: { type: 'number', description: 'Optionaler Seed für reproduzierbare Bilder' },
+        },
+        required: ['prompt', 'output_path'],
+      },
+    },
   ],
 }));
 
@@ -98,6 +116,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === 'get_bible_text') {
       const result = await getBibleText(args!.reference as string);
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    }
+
+    if (name === 'generate_image') {
+      const result = await generateImage(
+        args!.prompt as string,
+        args!.output_path as string,
+        args!.width as number | undefined,
+        args!.height as number | undefined,
+        args!.seed as number | undefined
+      );
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }
 
