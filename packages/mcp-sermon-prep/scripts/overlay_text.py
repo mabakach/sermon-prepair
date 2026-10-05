@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Brennt Wochenspruch und Bibelstelle ins Bild ein (Pillow).
 
-Wählt automatisch das ruhigere Bilddrittel (oben oder unten), legt dort einen
-weichen dunklen Verlauf und setzt den Text in weisser Serifenschrift darüber.
+Wählt automatisch das ruhigere Bilddrittel (oben oder unten) und setzt den Text
+in einer aus dem Bild abgeleiteten Kontrastfarbe (Kontrast mindestens 7:1, kein
+Hintergrundverlauf) mit dezentem Lichthof um die Buchstaben.
 """
 import argparse
+import colorsys
 import os
 import sys
 
@@ -61,6 +63,56 @@ def calmer_band(img):
     return min(scores, key=scores.get)
 
 
+def pixels(im):
+    get = getattr(im, 'get_flattened_data', None) or im.getdata
+    return list(get())
+
+
+def lum(c):
+    def f(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = c
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+
+
+def contrast(c1, c2):
+    l1, l2 = sorted((lum(c1), lum(c2)), reverse=True)
+    return (l1 + 0.05) / (l2 + 0.05)
+
+
+def pick_colors(img, box):
+    """Kontrastfarbe aus der Palette des Bildes: Farbton der dunkelsten Bildpartien
+    (bzw. der hellsten, wenn der Textbereich dunkel ist), Helligkeit so gewählt,
+    dass der Kontrast zum Textbereich mindestens 7:1 beträgt."""
+    small = img.resize((192, 108))
+    px = pixels(small)
+    px_sorted = sorted(px, key=lum)
+    n = max(len(px_sorted) // 7, 1)
+
+    region = pixels(img.crop(box).resize((96, 24)))
+    reg_sorted = sorted(region, key=lum)
+    k = max(len(reg_sorted) // 10, 1)
+    reg_dark, reg_light = reg_sorted[k], reg_sorted[-k]
+    reg_mean = tuple(int(sum(c[i] for c in region) / len(region)) for i in range(3))
+    use_dark_text = lum(reg_mean) > 0.35
+
+    pool = px_sorted[:n] if use_dark_text else px_sorted[-n:]
+    base = tuple(sum(c[i] for c in pool) / len(pool) / 255 for i in range(3))
+    hh, ll, ss = colorsys.rgb_to_hls(*base)
+    ss = min(max(ss, 0.25), 0.55)
+
+    worst = reg_dark if use_dark_text else reg_light
+    step = -0.02 if use_dark_text else 0.02
+    ll = min(ll, 0.30) if use_dark_text else max(ll, 0.75)
+    fill = tuple(int(v * 255) for v in colorsys.hls_to_rgb(hh, ll, ss))
+    while contrast(fill, worst) < 7 and 0.02 < ll < 0.98:
+        ll += step
+        fill = tuple(int(v * 255) for v in colorsys.hls_to_rgb(hh, ll, ss))
+    glow = (255, 250, 240) if use_dark_text else (10, 12, 20)
+    return fill, glow
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--input', required=True)
@@ -97,40 +149,38 @@ def main():
             break
         size -= 2
 
-    pad = int(h * 0.04)
-    scrim_h = block_h + 2 * pad
-    scrim_h = min(scrim_h + int(h * 0.12), int(h * 0.55))
-    y0 = h - scrim_h if band == 'bottom' else 0
+    pad = int(h * 0.05)
+    y_start = h - pad - block_h if band == 'bottom' else pad
 
-    # Verlauf: an der Bildkante am dunkelsten, zur Bildmitte transparent
-    scrim = Image.new('L', (w, scrim_h), 0)
-    sd = ImageDraw.Draw(scrim)
-    for i in range(scrim_h):
-        t = i / (scrim_h - 1)
-        edge = t if band == 'bottom' else 1 - t
-        sd.line([(0, i), (w, i)], fill=int(225 * min(1.0, edge * 1.6) ** 0.9))
-    dark = Image.new('RGB', (w, scrim_h), (15, 18, 28))
-    img.paste(dark, (0, y0), scrim)
+    # Textbereich ausmessen und Kontrastfarbe aus dem Bild ableiten
+    box = (margin, y_start, w - margin, y_start + block_h)
+    fill, glow = pick_colors(img, box)
 
     draw = ImageDraw.Draw(img)
-    if band == 'bottom':
-        y = h - pad - block_h
-    else:
-        y = pad
-    shadow = (0, 0, 0)
+    halo = Image.new('L', img.size, 0)
+    hd = ImageDraw.Draw(halo)
+
+    y = y_start
+    placed = []
     for line in lines:
         lw = draw.textlength(line, font=body)
-        x = (w - lw) / 2
-        draw.text((x + 2, y + 2), line, font=body, fill=shadow)
-        draw.text((x, y), line, font=body, fill=(255, 255, 255))
+        placed.append(((w - lw) / 2, y, line, body))
         y += line_h
     if a.reference:
         y += int(size * 0.35)
         label = f'– {a.reference}'
         lw = draw.textlength(label, font=ref)
-        x = (w - lw) / 2
-        draw.text((x + 1, y + 1), label, font=ref, fill=shadow)
-        draw.text((x, y), label, font=ref, fill=(235, 225, 200))
+        placed.append(((w - lw) / 2, y, label, ref))
+
+    # Dezenter Lichthof nur um die Buchstaben (kein Hintergrundverlauf)
+    for x, yy, text, font in placed:
+        hd.text((x, yy), text, font=font, fill=255)
+    halo = halo.filter(ImageFilter.GaussianBlur(max(size // 14, 3))).point(lambda v: int(v * 0.55))
+    img.paste(Image.new('RGB', img.size, glow), (0, 0), halo)
+
+    draw = ImageDraw.Draw(img)
+    for x, yy, text, font in placed:
+        draw.text((x, yy), text, font=font, fill=fill)
 
     os.makedirs(os.path.dirname(os.path.abspath(a.output)), exist_ok=True)
     img.save(a.output)
