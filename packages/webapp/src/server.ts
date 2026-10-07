@@ -1,11 +1,14 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
+import { basename, dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getLectionary, type Ordnung } from 'mcp-sermon-prep/perikopen';
 import { getChurchCalendar } from 'mcp-sermon-prep/kirchenjahr';
 import { getBibleText } from 'mcp-sermon-prep/bibleserver';
+import { generateImage, imageGenerationAvailable, overlayText } from 'mcp-sermon-prep/imagegen';
+import { existsSync } from 'node:fs';
+import { getJob, startJob } from './jobs.js';
 import { folderName, normalizeColor, normalizeSeason, renderHtml, writeResult, type Slot } from './render.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -132,10 +135,54 @@ async function generate(body: any) {
     evangelium,
     wochenpsalm,
     wochenspruch,
-    hasImage: false,
+    hasImage: body.image !== false && existsSync(join(OUTPUT_DIR, folder, 'bild.png')) && existsSync(join(OUTPUT_DIR, folder, 'bild-text.png')),
   });
   const file = await writeResult(OUTPUT_DIR, folder, html);
   return { folder, file, url: `/files/${encodeURIComponent(folder)}/index.html` };
+}
+
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+/** HTML von getBibleText → reiner Text ohne Versnummern (für das Bild). */
+function plainText(html: string): string {
+  return html
+    .replace(/<sup[^>]*>.*?<\/sup>/gs, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#\d+|\w+);/g, (m, e) => (e[0] === '#' ? String.fromCharCode(Number(e.slice(1))) : ENTITIES[e] ?? m))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function wochenspruchText(reference: string, fallback: string): Promise<string> {
+  if (!reference) return fallback;
+  try {
+    return plainText((await getBibleText(reference)).text) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function imageDir(body: any): string {
+  const date = checkDate(body.date);
+  const sundayName = typeof body.sundayName === 'string' && body.sundayName ? body.sundayName : undefined;
+  return join(OUTPUT_DIR, folderName(date, sundayName));
+}
+
+function checkImageInput(body: any): { prompt: string; seed: number } {
+  if (!imageGenerationAvailable()) throw new HttpError(400, 'Bildgenerierung nicht verfügbar (nur macOS mit mflux).');
+  const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
+  if (!prompt) throw new HttpError(400, 'Prompt fehlt');
+  const seed = Number(body.seed);
+  if (!Number.isInteger(seed) || seed < 0) throw new HttpError(400, 'Seed muss eine ganze Zahl >= 0 sein');
+  return { prompt, seed };
+}
+
+function jobResponse(fn: () => ReturnType<typeof startJob>) {
+  try {
+    return { id: fn().id };
+  } catch (e) {
+    throw new HttpError(409, e instanceof Error ? e.message : String(e));
+  }
 }
 
 async function serveFile(res: ServerResponse, root: string, rel: string) {
@@ -156,9 +203,50 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = decodeURIComponent(url.pathname);
     if (req.method === 'GET' && path === '/api/capabilities') {
-      return send(res, 200, { image: false, ollama: false, outputDir: OUTPUT_DIR });
+      return send(res, 200, { image: imageGenerationAvailable(), ollama: false, outputDir: OUTPUT_DIR });
     }
     if (req.method === 'POST' && path === '/api/lectionary') return send(res, 200, await lectionary(await readJson(req)));
+    if (req.method === 'POST' && path === '/api/image/preview') {
+      const body = await readJson(req);
+      const { prompt, seed } = checkImageInput(body);
+      const out = join(imageDir(body), 'bild-preview.png');
+      return send(res, 200, jobResponse(() => startJob('preview', async () => {
+        await generateImage(prompt, out, 640, 360, seed);
+        return { url: `/files/${encodeURIComponent(basename(dirname(out)))}/bild-preview.png?t=${Date.now()}` };
+      })));
+    }
+    if (req.method === 'POST' && path === '/api/image/final') {
+      const body = await readJson(req);
+      const { prompt, seed } = checkImageInput(body);
+      const wsRef = typeof body.reference === 'string' ? body.reference.trim() : '';
+      const wsFallback = typeof body.fallbackText === 'string' ? body.fallbackText : '';
+      const dir = imageDir(body);
+      const position = ['top', 'bottom'].includes(body.position) ? body.position : 'auto';
+      return send(res, 200, jobResponse(() => startJob('final', async () => {
+        const plain = join(dir, 'bild.png');
+        const withText = join(dir, 'bild-text.png');
+        const wsText = await wochenspruchText(wsRef, wsFallback);
+        await generateImage(prompt, plain, 1920, 1080, seed);
+        const folderUrl = `/files/${encodeURIComponent(basename(dir))}`;
+        if (wsText) await overlayText(plain, withText, wsText, wsRef || undefined, position);
+        const t = Date.now();
+        return { plain: `${folderUrl}/bild.png?t=${t}`, withText: wsText ? `${folderUrl}/bild-text.png?t=${t}` : null };
+      })));
+    }
+    if (req.method === 'POST' && path === '/api/image/overlay') {
+      const body = await readJson(req);
+      const dir = imageDir(body);
+      const position = ['top', 'bottom'].includes(body.position) ? body.position : 'auto';
+      const wsText = await wochenspruchText(String(body.reference ?? '').trim(), String(body.fallbackText ?? ''));
+      if (!existsSync(join(dir, 'bild.png'))) throw new HttpError(400, 'Noch kein Bild vorhanden');
+      const detail = await overlayText(join(dir, 'bild.png'), join(dir, 'bild-text.png'), wsText, body.reference || undefined, position);
+      return send(res, 200, { ...detail, url: `/files/${encodeURIComponent(basename(dir))}/bild-text.png?t=${Date.now()}` });
+    }
+    if (req.method === 'GET' && path.startsWith('/api/jobs/')) {
+      const job = getJob(path.slice('/api/jobs/'.length));
+      if (!job) throw new HttpError(404, 'Job unbekannt');
+      return send(res, 200, { ...job, elapsed: Math.round((Date.now() - job.startedAt) / 1000) });
+    }
     if (req.method === 'POST' && path === '/api/generate') return send(res, 200, await generate(await readJson(req)));
     if (req.method === 'GET' && path.startsWith('/files/')) return await serveFile(res, OUTPUT_DIR, path.slice('/files/'.length));
     if (req.method === 'GET') return await serveFile(res, PUBLIC, path === '/' ? 'index.html' : path.slice(1));

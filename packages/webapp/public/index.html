@@ -36,7 +36,7 @@
 <main>
   <h1>Gottesdienst-Vorbereitung</h1>
   <ol class="steps" id="steps">
-    <li>1 · Datum</li><li>2 · Lesungen</li><li>3 · Ergebnis</li>
+    <li>1 · Datum</li><li>2 · Lesungen</li><li>3 · Bild</li><li>4 · Ergebnis</li>
   </ol>
   <div class="card" id="view"></div>
 </main>
@@ -132,39 +132,108 @@ function stepReadings(msg) {
     ${de ? `<p class="hint">Evangelium: ${esc(l.evangelium)} · Wochenpsalm: ${esc(l.wochenpsalm)}</p>` : ''}
     ${slotRow('at','Lesung Altes Testament')}${slotRow('nt','Lesung Neues Testament')}${slotRow('predigttext','Predigttext')}
     <p class="err ${msg?'':'hidden'}">${esc(msg)}</p>
-    <div class="actions"><button class="secondary" id="back">Zurück</button><button id="next">HTML erzeugen</button></div>`);
+    <div class="actions"><button class="secondary" id="back">Zurück</button><button id="next">${state.caps.image && de && l.wochenspruch ? 'Weiter zum Bild' : 'HTML erzeugen'}</button></div>`);
   $('#back').onclick = () => stepDate();
-  $('#next').onclick = generate;
+  $('#next').onclick = () => {
+    const slots = {};
+    for (const k of ['at','nt','predigttext']) {
+      const ref = $('#s_' + k).value.trim();
+      slots[k] = { reference: ref, perikope: !!ref && ref === (l[k] || '') };
+    }
+    if (de) {
+      slots.evangelium = { reference: l.evangelium };
+      slots.wochenpsalm = { reference: l.wochenpsalm };
+      if (l.wochenspruch) slots.wochenspruch = { reference: l.wochenspruch.reference, fallbackText: l.wochenspruch.text };
+    }
+    state.collected = slots;
+    state.skipImage = true;
+    if (state.caps.image && de && l.wochenspruch) stepImage(); else generate();
+  };
 }
 
-async function generate() {
+async function generate(msg) {
   const l = state.lect, de = l.sunday && state.form.ordnung === 'de';
-  const slots = {};
-  for (const k of ['at','nt','predigttext']) {
-    const ref = $('#s_' + k).value.trim();
-    slots[k] = { reference: ref, perikope: !!ref && ref === (l[k] || '') };
-  }
-  if (de) {
-    slots.evangelium = { reference: l.evangelium };
-    slots.wochenpsalm = { reference: l.wochenpsalm };
-    if (l.wochenspruch) slots.wochenspruch = { reference: l.wochenspruch.reference, fallbackText: l.wochenspruch.text };
-  }
-  $('#next').disabled = true; $('#next').textContent = 'Erzeuge …';
+  view(`<p>Erzeuge HTML …</p>`);
   try {
     state.result = await api('/api/generate', {
       date: l.date, ordnung: state.form.ordnung, deOnly: de,
-      sundayName: l.sundayName, colorRaw: l.colorRaw, seasonRaw: l.seasonRaw, slots });
+      sundayName: l.sundayName, colorRaw: l.colorRaw, seasonRaw: l.seasonRaw, slots: state.collected, image: !state.skipImage });
     stepResult();
   } catch (e) { stepReadings(e.message); }
 }
 
-function stepResult() {
+function defaultSeed() { const [y,m,d] = state.lect.date.split('-').map(Number); return Date.UTC(y, m-1, d) / 1000; }
+
+async function runJob(path, body, onTick) {
+  const { id } = await api(path, body);
+  for (;;) {
+    await new Promise(r => setTimeout(r, 2000));
+    const j = await api('/api/jobs/' + id);
+    if (j.status === 'running') { onTick(j.elapsed); continue; }
+    if (j.status === 'error') throw new Error(j.error);
+    return j.result;
+  }
+}
+
+function stepImage() {
   state.step = 2;
+  const l = state.lect, im = state.image ??= { prompt:'', seed: defaultSeed(), preview:null, final:null };
+  view(`
+    <div class="spoken"><b>Wochenspruch (${esc(l.wochenspruch.reference)})</b><br>${esc(l.wochenspruch.text)}</div>
+    <label for="prompt">Bild-Prompt (englisch)</label>
+    <textarea id="prompt" placeholder="z.B. Watercolor illustration of a small oil lamp glowing on a stone windowsill at dawn, … no text, no people, wide 16:9 composition, calm uncluttered area at the top for text">${esc(im.prompt)}</textarea>
+    <p class="hint">Keine Hände, Gesichter oder Text im Motiv. Ruhige Fläche oben lassen (Text wird dort eingebrannt).</p>
+    <label for="seed">Seed</label>
+    <input type="number" id="seed" min="0" step="1" value="${im.seed}">
+    <p class="hint">Vorschlag: Mitternacht UTC des Gottesdienst-Datums. Gleicher Seed in anderer Auflösung kann eine leicht andere Komposition liefern.</p>
+    <div class="actions">
+      <button id="prev">Vorschau (640×360)</button>
+      <button id="fin" class="secondary" ${im.preview ? '' : 'disabled'}>Final erzeugen (1920×1080)</button>
+    </div>
+    <p id="status" class="hint"></p><p class="err hidden" id="err"></p>
+    <div id="pics">${im.preview ? `<img src="${im.preview}" style="max-width:100%;margin-top:12px">` : ''}${im.final ? finalHtml(im.final) : ''}</div>
+    <div class="actions">
+      <button class="secondary" id="back">Zurück</button>
+      <button class="secondary" id="skip">Ohne Bild weiter</button>
+      <button id="done" ${im.final ? '' : 'disabled'}>HTML erzeugen</button>
+    </div>`);
+  const input = () => { im.prompt = $('#prompt').value.trim(); im.seed = Number($('#seed').value); return { date:l.date, sundayName:l.sundayName, prompt:im.prompt, seed:im.seed }; };
+  const busy = on => ['prev','fin','back','skip','done'].forEach(i => $('#'+i).disabled = on || (i === 'fin' && !im.preview) || (i === 'done' && !im.final));
+  const run = async (path, extra, label) => {
+    $('#err').classList.add('hidden');
+    busy(true);
+    try {
+      return await runJob(path, { ...input(), ...extra }, s => $('#status').textContent = `${label} … ${s} s`);
+    } catch (e) { $('#err').textContent = e.message; $('#err').classList.remove('hidden'); return null; }
+    finally { $('#status').textContent = ''; busy(false); }
+  };
+  $('#prev').onclick = async () => {
+    if (!$('#prompt').value.trim()) { $('#err').textContent = 'Bitte einen Prompt eingeben.'; $('#err').classList.remove('hidden'); return; }
+    const r = await run('/api/image/preview', {}, 'Vorschau wird erzeugt');
+    if (r) { im.preview = r.url; stepImage(); }
+  };
+  $('#fin').onclick = async () => {
+    const w = l.wochenspruch;
+    const r = await run('/api/image/final', { reference: w.reference, fallbackText: w.text }, 'Finales Bild wird erzeugt (ca. 5 min)');
+    if (r) { im.final = r; stepImage(); }
+  };
+  $('#back').onclick = () => stepReadings();
+  $('#skip').onclick = () => { state.skipImage = true; generate(); };
+  $('#done').onclick = () => { state.skipImage = false; generate(); };
+}
+
+function finalHtml(f) {
+  return `<p class="hint">Mit Wochenspruch:</p><img src="${f.withText || f.plain}" style="max-width:100%">
+    <p class="hint">Ohne Text:</p><img src="${f.plain}" style="max-width:100%">`;
+}
+
+function stepResult() {
+  state.step = 3;
   view(`
     <p>Gespeichert: <code>${esc(state.result.file)}</code></p>
     <p><a href="${state.result.url}" target="_blank" rel="noopener">HTML öffnen</a></p>
     <div class="actions"><button id="again">Neuer Gottesdienst</button></div>`);
-  $('#again').onclick = () => { state.step = 0; state.lect = null; stepDate(); };
+  $('#again').onclick = () => { state.step = 0; state.lect = null; state.image = null; state.skipImage = false; stepDate(); };
 }
 
 api('/api/capabilities').then(c => { state.caps = c; }).catch(() => {}).finally(() => stepDate());

@@ -15,6 +15,14 @@ function findMflux(): string {
   return existsSync(local) ? local : 'mflux-generate-flux2';
 }
 
+/** true, wenn macOS und das mflux-Binary auffindbar ist (Env, ~/.local/bin oder PATH). */
+export function imageGenerationAvailable(): boolean {
+  if (process.platform !== 'darwin') return false;
+  const bin = findMflux();
+  if (bin.includes('/')) return existsSync(bin);
+  return (process.env.PATH ?? '').split(':').some((d) => d && existsSync(join(d, bin)));
+}
+
 const CROP_PY = `
 import sys
 from PIL import Image
