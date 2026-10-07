@@ -177,7 +177,7 @@ async function runJob(path, body, onTick) {
 
 function stepImage() {
   state.step = 2;
-  const l = state.lect, im = state.image ??= { prompt:'', seed: defaultSeed(), preview:null, final:null };
+  const l = state.lect, im = state.image ??= { prompt:'', seed: defaultSeed(), final:null };
   view(`
     <div class="spoken"><b>Wochenspruch (${esc(l.wochenspruch.reference)})</b><br>${esc(l.wochenspruch.text)}</div>
     <label for="prompt">Bild-Prompt (englisch)</label>
@@ -186,20 +186,19 @@ function stepImage() {
     <p class="hint">Keine Hände, Gesichter oder Text im Motiv. Ruhige Fläche oben lassen (Text wird dort eingebrannt).</p>
     <label for="seed">Seed</label>
     <input type="number" id="seed" min="0" step="1" value="${im.seed}">
-    <p class="hint">Vorschlag: Mitternacht UTC des Gottesdienst-Datums. Gleicher Seed in anderer Auflösung kann eine leicht andere Komposition liefern.</p>
+    <p class="hint">Vorschlag: Mitternacht UTC des Gottesdienst-Datums.</p>
     <div class="actions">
-      <button id="prev">Vorschau (640×360)</button>
-      <button id="fin" class="secondary" ${im.preview ? '' : 'disabled'}>Final erzeugen (1920×1080)</button>
+      <button id="fin">${im.final ? 'Neu erzeugen' : 'Bild erzeugen'} (1920×1080, ca. 5 min)</button>
     </div>
     <p id="status" class="hint"></p><p class="err hidden" id="err"></p>
-    <div id="pics">${im.preview ? `<img src="${im.preview}" style="max-width:100%;margin-top:12px">` : ''}${im.final ? finalHtml(im.final) : ''}</div>
+    <div id="pics">${im.final ? finalHtml(im.final) : ''}</div>
     <div class="actions">
       <button class="secondary" id="back">Zurück</button>
       <button class="secondary" id="skip">Ohne Bild weiter</button>
       <button id="done" ${im.final ? '' : 'disabled'}>HTML erzeugen</button>
     </div>`);
   const input = () => { im.prompt = $('#prompt').value.trim(); im.seed = Number($('#seed').value); return { date:l.date, sundayName:l.sundayName, prompt:im.prompt, seed:im.seed }; };
-  const busy = on => ['prev','fin','back','skip','done',...(state.caps.ollama ? ['suggest'] : [])].forEach(i => $('#'+i).disabled = on || (i === 'fin' && !im.preview) || (i === 'done' && !im.final));
+  const busy = on => ['fin','back','skip','done',...(state.caps.ollama ? ['suggest'] : [])].forEach(i => $('#'+i).disabled = on || (i === 'done' && !im.final));
   const run = async (path, extra, label) => {
     $('#err').classList.add('hidden');
     busy(true);
@@ -214,20 +213,16 @@ function stepImage() {
     try {
       const w = l.wochenspruch;
       const r = await api('/api/prompt', { reference: w.reference, text: w.text, hint: $('#hint').value });
-      $('#prompt').value = r.prompt; im.prompt = r.prompt; im.preview = null; im.final = null;
+      $('#prompt').value = r.prompt; im.prompt = r.prompt; im.final = null;
     } catch (e) { $('#err').textContent = e.message; $('#err').classList.remove('hidden'); }
     finally { $('#status').textContent = ''; busy(false); }
   };
   if (state.caps.ollama) $('#suggest').onclick = suggest;
   if (state.caps.ollama && !im.prompt) suggest();
-  $('#prev').onclick = async () => {
-    if (!$('#prompt').value.trim()) { $('#err').textContent = 'Bitte einen Prompt eingeben.'; $('#err').classList.remove('hidden'); return; }
-    const r = await run('/api/image/preview', {}, 'Vorschau wird erzeugt');
-    if (r) { im.preview = r.url; stepImage(); }
-  };
   $('#fin').onclick = async () => {
+    if (!$('#prompt').value.trim()) { $('#err').textContent = 'Bitte einen Prompt eingeben.'; $('#err').classList.remove('hidden'); return; }
     const w = l.wochenspruch;
-    const r = await run('/api/image/final', { reference: w.reference, fallbackText: w.text }, 'Finales Bild wird erzeugt (ca. 5 min)');
+    const r = await run('/api/image/final', { reference: w.reference, fallbackText: w.text }, 'Bild wird erzeugt (ca. 5 min)');
     if (r) { im.final = r; stepImage(); }
   };
   $('#back').onclick = () => stepReadings();

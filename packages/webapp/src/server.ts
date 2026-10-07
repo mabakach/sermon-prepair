@@ -219,15 +219,6 @@ const server = createServer(async (req, res) => {
         throw new HttpError(502, e instanceof Error ? e.message : String(e));
       }
     }
-    if (req.method === 'POST' && path === '/api/image/preview') {
-      const body = await readJson(req);
-      const { prompt, seed } = checkImageInput(body);
-      const out = join(imageDir(body), 'bild-preview.png');
-      return send(res, 200, jobResponse(() => startJob('preview', async () => {
-        await generateImage(prompt, out, 640, 360, seed);
-        return { url: `/files/${encodeURIComponent(basename(dirname(out)))}/bild-preview.png?t=${Date.now()}` };
-      })));
-    }
     if (req.method === 'POST' && path === '/api/image/final') {
       const body = await readJson(req);
       const { prompt, seed } = checkImageInput(body);
