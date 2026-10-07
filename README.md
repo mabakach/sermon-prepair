@@ -98,7 +98,7 @@ Alternative zum Skill, ohne Claude Code:
 npm run web          # http://127.0.0.1:4173
 ```
 
-Schritte: Datum und Ordnung → Lesungen → Bild (optional) → HTML. Das Bild entsteht in 1920×1080 (ca. 5 min) mit eingebranntem Wochenspruch (zusätzlich ohne Text). Eine Vorschau in kleiner Auflösung gibt es nicht, weil sie bei gleichem Seed stark vom grossen Bild abweicht. Prompt und Seed sind editierbar; den Prompt-Vorschlag liefert lokal Ollama (`ollama pull qwen3.5:9b`, sonst Eingabe von Hand). Es läuft nur ein Bildjob gleichzeitig.
+Schritte: Datum und Ordnung → Lesungen → Bild (optional) → HTML. Das Bild entsteht in 1920×1080 (ca. 5 min) mit eingebranntem Wochenspruch (zusätzlich ohne Text). Prompt und Seed sind editierbar; den Prompt-Vorschlag liefert lokal Ollama (`ollama pull qwen3.5:9b`, sonst Eingabe von Hand). Es läuft nur ein Bildjob gleichzeitig.
 
 Umgebungsvariablen: `PORT` (4173), `SERMON_OUTPUT_DIR` (`~/Documents/Gottesdienste`), `OLLAMA_MODEL` (`qwen3.5:9b`), `OLLAMA_HOST`, `MFLUX_BIN`. Der Server lauscht nur auf `127.0.0.1`. Unter Windows entfällt der Bildschritt.
 
