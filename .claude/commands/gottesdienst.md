@@ -44,18 +44,23 @@ Nur bei `--bild` **und** deutscher Ordnung (Wochenspruch vorhanden). Sonst Hinwe
 1. Nach dem Abruf der Bibeltexte und vor dem Schreiben der HTML-Datei.
 2. Formuliere einen **englischen** Bild-Prompt (1 bis 3 Sätze). Das **Motiv muss sich deutlich aus dem Wochenspruch ergeben**: Bestimme zuerst die zentrale Aussage und ihr wörtliches Bild (z.B. Weg, Licht, Wasser, Brot, Tür, Saat, Fels, Lampe, Brücke, Berg, Meer, Nacht und Sterne, Sturm und Ruhe, Weinstock) und mache genau dieses Bild zum Hauptmotiv im Vordergrund. Verwende **nicht** standardmässig Hügel, Wiese, Sonnenaufgang und einzelnen Baum; wähle Landschaft, Tageszeit, Licht und Farbstimmung passend zur Aussage (z.B. Trost: Lampe im Dunkeln; Ruf zur Nachfolge: Weg und Wegweiser; Gericht/Ernst: Sturmhimmel; Freude: helle Blüten). Stil: Aquarell-Illustration, kontemplativ, für Gottesdienst-Blatt.
    - **Keine Hände, Finger, Arme oder Gesichter** als Motiv (das Modell zeichnet sie fehlerhaft, z.B. sechs Finger). Übersetze den Spruch stattdessen in Landschaft, Gegenstände und Symbole. Falls Menschen unvermeidlich sind: kleine Silhouetten von hinten in der Ferne.
+   - Ergänze im Prompt "wide 16:9 composition, calm uncluttered area at the top for text" (ruhige Fläche für den Text, Motiv nicht dadurch ersetzen).
    - Kein Text, keine Schrift, keine Jesus-Darstellung, keine Kreuz-Kitsch-Motive.
    - Beispiel (Jeremia 17,14, Heilung): "Watercolor illustration of a small oil lamp glowing on a stone windowsill at dawn, warm light spilling over healing herbs in a clay pot, soft golden and blue tones, contemplative, church bulletin art, no text, no people".
-3. Format **16:9** (Beamer): immer `width: 1920, height: 1080`.
-   **Seed:** `basis` = Unix-Timestamp von Mitternacht UTC des Gottesdienst-Datums (z.B. 2026-10-11 → `date -u -j -f "%Y-%m-%d %H:%M:%S" "2026-10-11 00:00:00" +%s` = 1791676800). Variante k nutzt `basis + k - 1`.
+3. **Prompt und Seed bestätigen:** Berechne den Seed-Vorschlag `basis` (siehe Schritt 4) und zeige dem Benutzer vor jeder Generierung beides im Chat:
+   > Bild-Prompt: *[englischer Prompt]*
+   > Seed: *[basis]*
+   > Enter = übernehmen, oder neuen Prompt und/oder Seed eingeben (z.B. `Seed 42` oder ein neuer Prompt).
+   Warte auf die Antwort. Leere Antwort = übernehmen. Eingegebener Prompt ersetzt den Vorschlag (wird unverändert verwendet), eingegebene Zahl ersetzt `basis`. Frage so lange nach, bis der Benutzer bestätigt (Enter) bzw. nichts mehr ändern will, dann erst generieren.
+4. Format **16:9** (Beamer): immer `width: 1920, height: 1080`.
+   **Seed-Vorschlag:** `basis` = Unix-Timestamp von Mitternacht UTC des Gottesdienst-Datums (z.B. 2026-10-11 → `date -u -j -f "%Y-%m-%d %H:%M:%S" "2026-10-11 00:00:00" +%s` = 1791676800). Variante k nutzt `basis + k - 1`.
    Anzahl Varianten `n`: Standard 1, mit `--varianten <n>` 2 bis 4.
    - `n = 1`: Ruf `generate_image(prompt, output_path, width: 1920, height: 1080, seed: basis)` auf mit `output_path` = absoluter Pfad `<Ordner>/bild.png`.
    - `n > 1`: Ruf `generate_image` n-mal mit `seed` `basis` bis `basis + n - 1` auf, `output_path` = `<Ordner>/bild-1.png` bis `bild-n.png`. Zeige alle Varianten (Read auf jede Datei) und frage, welche übernommen werden soll. Benenne die gewählte per Bash in `bild.png` um und lösche die übrigen.
    - Jeder Aufruf dauert mehrere Minuten (16:9 in voller Auflösung braucht länger als ein Quadrat); weise vorher kurz auf die Gesamtdauer hin.
-   - Prompt bei 16:9: ergänze "wide 16:9 composition, calm uncluttered area at the top for text" (ruhige Fläche für den Text, Motiv nicht dadurch ersetzen).
-4. **Text ins Bild:** Ruf `add_text_to_image(input_path: <Ordner>/bild.png, output_path: <Ordner>/bild-text.png, text: <Wochenspruch-Text aus get_bible_text>, reference: wochenspruch.reference)` auf. Verwende **exakt denselben Text** (gleiche Übersetzung, gleicher Wortlaut) wie im HTML bei `{{WOCHENSPRUCH_TEXT}}`, nicht `wochenspruch.text` aus `get_lectionary` (nur Fallback, wenn der Abruf scheiterte; dann auch im HTML dieser). Das Tool wählt oben oder unten selbst. `bild.png` bleibt ohne Text erhalten, `bild-text.png` enthält den Wochenspruch. Beide Dateien werden gespeichert und im HTML eingebunden. Zeige `bild-text.png` (Read) und biete bei Problemen (z.B. Text verdeckt Motiv) `position: "top"` oder `"bottom"` zum erneuten Aufruf an.
-5. Schlägt der Aufruf fehl: Fehler im Chat nennen, ohne Bild weitermachen (Block entfernen). Meldet der Fehler Hugging Face / gated: Lizenz für `black-forest-labs/FLUX.2-klein-9B` akzeptieren und `hf auth login` ausführen.
-6. Der Ordner muss vor dem Aufruf nicht existieren (das Tool legt ihn an).
+5. **Text ins Bild:** Ruf `add_text_to_image(input_path: <Ordner>/bild.png, output_path: <Ordner>/bild-text.png, text: <Wochenspruch-Text aus get_bible_text>, reference: wochenspruch.reference)` auf. Verwende **exakt denselben Text** (gleiche Übersetzung, gleicher Wortlaut) wie im HTML bei `{{WOCHENSPRUCH_TEXT}}`, nicht `wochenspruch.text` aus `get_lectionary` (nur Fallback, wenn der Abruf scheiterte; dann auch im HTML dieser). Das Tool wählt oben oder unten selbst. `bild.png` bleibt ohne Text erhalten, `bild-text.png` enthält den Wochenspruch. Beide Dateien werden gespeichert und im HTML eingebunden. Zeige `bild-text.png` (Read) und biete bei Problemen (z.B. Text verdeckt Motiv) `position: "top"` oder `"bottom"` zum erneuten Aufruf an.
+6. Schlägt der Aufruf fehl: Fehler im Chat nennen, ohne Bild weitermachen (Block entfernen). Meldet der Fehler Hugging Face / gated: Lizenz für `black-forest-labs/FLUX.2-klein-9B` akzeptieren und `hf auth login` ausführen.
+7. Der Ordner muss vor dem Aufruf nicht existieren (das Tool legt ihn an).
 
 ---
 
