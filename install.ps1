@@ -124,3 +124,6 @@ Write-Host ""
 Write-Host "  Starte Claude Code neu und verwende den Skill mit:"
 Write-Host "  /gottesdienst 2026-06-28" -ForegroundColor White
 Write-Host ""
+Write-Host "  Oder die Webapp (Wizard im Browser, ohne Bildgenerierung) starten mit:"
+Write-Host "  npm run web   (im Repo-Ordner, http://127.0.0.1:4173)" -ForegroundColor White
+Write-Host ""

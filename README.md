@@ -90,6 +90,18 @@ uv tool update-shell
 
 FLUX.2 Klein 9B ist bei Hugging Face lizenzpflichtig: Lizenz auf [huggingface.co/black-forest-labs/FLUX.2-klein-9B](https://huggingface.co/black-forest-labs/FLUX.2-klein-9B) akzeptieren, Read-Token erstellen und `uvx --from huggingface_hub hf auth login` ausführen. Der erste Lauf lädt mehrere GB Gewichte. Eine Generierung dauert danach ca. 2 Minuten (Peak-RAM ca. 20 GB). Eigenes Binary: Umgebungsvariable `MFLUX_BIN`.
 
+## Webapp (Wizard im Browser)
+
+Alternative zum Skill, ohne Claude Code:
+
+```bash
+npm run web          # http://127.0.0.1:4173
+```
+
+Schritte: Datum und Ordnung → Lesungen → Bild (optional) → HTML. Das Bild wird zuerst als Vorschau (640×360, ca. 45 s) erzeugt, erst nach Freigabe in 1920×1080 (ca. 5 min) mit eingebranntem Wochenspruch. Prompt und Seed sind editierbar; den Prompt-Vorschlag liefert lokal Ollama (`ollama pull qwen3.5:9b`, sonst Eingabe von Hand). Es läuft nur ein Bildjob gleichzeitig.
+
+Umgebungsvariablen: `PORT` (4173), `SERMON_OUTPUT_DIR` (`~/Documents/Gottesdienste`), `OLLAMA_MODEL` (`qwen3.5:9b`), `OLLAMA_HOST`, `MFLUX_BIN`. Der Server lauscht nur auf `127.0.0.1`. Unter Windows entfällt der Bildschritt.
+
 ## Quellen
 
 - **Kirchenjahr**: [kirchenjahr-evangelisch.de](https://kirchenjahr-evangelisch.de/) – Sonntagsname und liturgische Farbe
@@ -112,5 +124,8 @@ sermon-prepair/
 │           ├── perikopen.ts       # Scraper kirchenjahr-evangelisch.de (de) + pfarrverein.ch (ch)
 │           ├── bibleserver.ts     # Scraper bibleserver.com/ZB
 │           └── imagegen.ts        # Bildgenerierung (mflux, FLUX.2 Klein 9B)
+│   └── webapp/                    # Wizard im Browser (node:http, Vanilla-JS)
+│       ├── src/                   # server.ts, render.ts, jobs.ts, ollama.ts
+│       └── public/index.html
 └── package.json                   # Monorepo-Root (npm workspaces)
 ```

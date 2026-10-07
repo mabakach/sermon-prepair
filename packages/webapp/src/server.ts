@@ -9,6 +9,7 @@ import { getBibleText } from 'mcp-sermon-prep/bibleserver';
 import { generateImage, imageGenerationAvailable, overlayText } from 'mcp-sermon-prep/imagegen';
 import { existsSync } from 'node:fs';
 import { getJob, startJob } from './jobs.js';
+import { ollamaAvailable, OLLAMA_MODEL, suggestImagePrompt } from './ollama.js';
 import { folderName, normalizeColor, normalizeSeason, renderHtml, writeResult, type Slot } from './render.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -203,9 +204,21 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = decodeURIComponent(url.pathname);
     if (req.method === 'GET' && path === '/api/capabilities') {
-      return send(res, 200, { image: imageGenerationAvailable(), ollama: false, outputDir: OUTPUT_DIR });
+      return send(res, 200, { image: imageGenerationAvailable(), ollama: await ollamaAvailable(), model: OLLAMA_MODEL, outputDir: OUTPUT_DIR });
     }
     if (req.method === 'POST' && path === '/api/lectionary') return send(res, 200, await lectionary(await readJson(req)));
+    if (req.method === 'POST' && path === '/api/prompt') {
+      const body = await readJson(req);
+      const reference = String(body.reference ?? '').trim();
+      const text = String(body.text ?? '').trim();
+      if (!text) throw new HttpError(400, 'Wochenspruch fehlt');
+      if (!(await ollamaAvailable())) throw new HttpError(503, `Ollama oder Modell ${OLLAMA_MODEL} nicht verfügbar`);
+      try {
+        return send(res, 200, { prompt: await suggestImagePrompt(reference, text, String(body.hint ?? '').trim()) });
+      } catch (e) {
+        throw new HttpError(502, e instanceof Error ? e.message : String(e));
+      }
+    }
     if (req.method === 'POST' && path === '/api/image/preview') {
       const body = await readJson(req);
       const { prompt, seed } = checkImageInput(body);

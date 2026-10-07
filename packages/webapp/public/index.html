@@ -182,6 +182,7 @@ function stepImage() {
     <div class="spoken"><b>Wochenspruch (${esc(l.wochenspruch.reference)})</b><br>${esc(l.wochenspruch.text)}</div>
     <label for="prompt">Bild-Prompt (englisch)</label>
     <textarea id="prompt" placeholder="z.B. Watercolor illustration of a small oil lamp glowing on a stone windowsill at dawn, … no text, no people, wide 16:9 composition, calm uncluttered area at the top for text">${esc(im.prompt)}</textarea>
+    ${state.caps.ollama ? `<div class="row"><input type="text" id="hint" placeholder="Wunsch ans Motiv (optional, deutsch oder englisch)"><button class="secondary" id="suggest" style="flex:0 0 auto">Prompt vorschlagen</button></div>` : `<p class="hint">Ollama nicht verfügbar – Prompt bitte von Hand eingeben.</p>`}
     <p class="hint">Keine Hände, Gesichter oder Text im Motiv. Ruhige Fläche oben lassen (Text wird dort eingebrannt).</p>
     <label for="seed">Seed</label>
     <input type="number" id="seed" min="0" step="1" value="${im.seed}">
@@ -198,7 +199,7 @@ function stepImage() {
       <button id="done" ${im.final ? '' : 'disabled'}>HTML erzeugen</button>
     </div>`);
   const input = () => { im.prompt = $('#prompt').value.trim(); im.seed = Number($('#seed').value); return { date:l.date, sundayName:l.sundayName, prompt:im.prompt, seed:im.seed }; };
-  const busy = on => ['prev','fin','back','skip','done'].forEach(i => $('#'+i).disabled = on || (i === 'fin' && !im.preview) || (i === 'done' && !im.final));
+  const busy = on => ['prev','fin','back','skip','done',...(state.caps.ollama ? ['suggest'] : [])].forEach(i => $('#'+i).disabled = on || (i === 'fin' && !im.preview) || (i === 'done' && !im.final));
   const run = async (path, extra, label) => {
     $('#err').classList.add('hidden');
     busy(true);
@@ -207,6 +208,18 @@ function stepImage() {
     } catch (e) { $('#err').textContent = e.message; $('#err').classList.remove('hidden'); return null; }
     finally { $('#status').textContent = ''; busy(false); }
   };
+  const suggest = async () => {
+    $('#err').classList.add('hidden');
+    busy(true); $('#status').textContent = 'Ollama schreibt den Prompt …';
+    try {
+      const w = l.wochenspruch;
+      const r = await api('/api/prompt', { reference: w.reference, text: w.text, hint: $('#hint').value });
+      $('#prompt').value = r.prompt; im.prompt = r.prompt; im.preview = null; im.final = null;
+    } catch (e) { $('#err').textContent = e.message; $('#err').classList.remove('hidden'); }
+    finally { $('#status').textContent = ''; busy(false); }
+  };
+  if (state.caps.ollama) $('#suggest').onclick = suggest;
+  if (state.caps.ollama && !im.prompt) suggest();
   $('#prev').onclick = async () => {
     if (!$('#prompt').value.trim()) { $('#err').textContent = 'Bitte einen Prompt eingeben.'; $('#err').classList.remove('hidden'); return; }
     const r = await run('/api/image/preview', {}, 'Vorschau wird erzeugt');

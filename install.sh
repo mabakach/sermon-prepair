@@ -119,6 +119,16 @@ else
     warn "  3. uvx --from huggingface_hub hf auth login"
   fi
   info "Der erste Lauf lädt mehrere GB Modellgewichte (Peak-RAM ca. 20 GB, empfohlen: 32 GB)."
+
+  if command -v ollama &>/dev/null; then
+    if ollama list 2>/dev/null | grep -q '^qwen3.5:9b'; then
+      ok "Ollama-Modell qwen3.5:9b vorhanden (Prompt-Vorschlag in der Webapp)"
+    else
+      warn "Ollama-Modell qwen3.5:9b fehlt (nur für den Prompt-Vorschlag in der Webapp): ollama pull qwen3.5:9b"
+    fi
+  else
+    warn "Ollama nicht gefunden – die Webapp schlägt dann keinen Bild-Prompt vor (Eingabe von Hand möglich): https://ollama.com"
+  fi
 fi
 
 # ── Fertig ───────────────────────────────────────────────────────────────────
@@ -127,4 +137,7 @@ echo -e "${BOLD}${GREEN}Installation abgeschlossen.${NC}"
 echo ""
 echo "  Starte Claude Code neu und verwende den Skill mit:"
 echo -e "  ${BOLD}/gottesdienst 2026-06-28${NC}"
+echo ""
+echo "  Oder die Webapp (Wizard im Browser) starten mit:"
+echo -e "  ${BOLD}npm run web${NC}   (im Repo-Ordner, http://127.0.0.1:4173)"
 echo ""
