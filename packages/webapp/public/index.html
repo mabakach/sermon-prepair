@@ -4,37 +4,56 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gottesdienst-Vorbereitung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#f6f4ef; --fg:#222; --muted:#777; --card:#fff; --accent:#4a7c59; --line:#ddd; --err:#b91c1c; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#1c1c1a; --fg:#e8e6e1; --muted:#999; --card:#262624; --accent:#7fb592; --line:#3a3a37; --err:#f08080; } }
+  :root { --bg:#f4f4f4; --fg:#373737; --muted:#6b6b6b; --card:#fff; --accent:#0078bb; --accent-dark:#005f96; --line:#e2e2e2; --err:#c62828; --tint:#eaf3f9; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161a1d; --fg:#e6e9ec; --muted:#9aa3ab; --card:#1f2428; --accent:#4aa3da; --accent-dark:#6bb6e6; --line:#2e353b; --err:#ef8a8a; --tint:#1b2a35; } }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
-  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { font-size:1.4rem; margin:0 0 16px; }
-  ol.steps { display:flex; gap:8px; list-style:none; padding:0; margin:0 0 20px; flex-wrap:wrap; }
-  ol.steps li { padding:4px 12px; border-radius:999px; border:1px solid var(--line); color:var(--muted); font-size:.85rem; }
-  ol.steps li.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-  ol.steps li.done { color:var(--accent); border-color:var(--accent); }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
-  label { display:block; font-weight:600; margin:14px 0 4px; font-size:.9rem; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:300 17px/1.6 Roboto, system-ui, sans-serif; }
+  header.top { background:var(--accent); color:#fff; }
+  header.top .in { max-width:880px; margin:0 auto; padding:28px 20px 22px; }
+  header.top h1 { font:700 clamp(1.7rem, 4vw, 2.4rem)/1.1 "Roboto Condensed", Roboto, sans-serif; text-transform:uppercase; letter-spacing:.02em; margin:0; }
+  header.top p { margin:6px 0 0; font-weight:300; opacity:.9; }
+  main { max-width:880px; margin:0 auto; padding:0 20px 72px; }
+  ol.steps { display:flex; list-style:none; padding:0; margin:0 0 28px; background:var(--card); box-shadow:0 2px 6px rgba(0,0,0,.08); border-radius:0 0 3px 3px; overflow-x:auto; }
+  ol.steps li { flex:1; padding:14px 16px; white-space:nowrap; text-align:center; font:400 .95rem "Roboto Condensed", Roboto, sans-serif; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); border-bottom:3px solid transparent; }
+  ol.steps li.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:700; }
+  ol.steps li.done { color:var(--fg); border-bottom-color:var(--line); }
+  .card { background:var(--card); border-radius:3px; padding:28px 32px; box-shadow:0 2px 6px rgba(0,0,0,.08); }
+  @media (max-width:560px) { .card { padding:20px 16px; } }
+  label { display:block; font:700 .85rem "Roboto Condensed", Roboto, sans-serif; text-transform:uppercase; letter-spacing:.06em; margin:20px 0 6px; color:var(--fg); }
+  label:first-child { margin-top:0; }
   input[type=text], input[type=date], input[type=number], textarea, select {
-    width:100%; padding:8px 10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:6px; }
-  textarea { min-height:90px; resize:vertical; }
-  .row { display:flex; gap:12px; flex-wrap:wrap; } .row > * { flex:1; min-width:160px; }
-  .hint { color:var(--muted); font-size:.85rem; margin:4px 0 0; }
-  .actions { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
-  button { font:inherit; padding:8px 16px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+    width:100%; padding:11px 12px; font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-bottom:2px solid var(--muted); border-radius:3px; transition:border-color .15s, box-shadow .15s; }
+  input:focus, textarea:focus, select:focus { outline:none; border-color:var(--accent); border-bottom-color:var(--accent); box-shadow:0 0 0 3px var(--tint); }
+  textarea { min-height:110px; resize:vertical; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:10px; } .row > input { flex:1; min-width:200px; }
+  .hint { color:var(--muted); font-size:.88rem; margin:6px 0 0; }
+  .actions { display:flex; gap:12px; margin-top:28px; flex-wrap:wrap; }
+  button { font:700 .95rem "Roboto Condensed", Roboto, sans-serif; text-transform:uppercase; letter-spacing:.08em; padding:11px 24px; border-radius:3px; border:2px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; transition:background .15s, color .15s; }
+  button:hover:not(:disabled) { background:var(--accent-dark); border-color:var(--accent-dark); }
   button.secondary { background:transparent; color:var(--accent); }
-  button:disabled { opacity:.5; cursor:default; }
-  .err { color:var(--err); margin-top:12px; } .hidden { display:none; }
-  .spoken { padding:10px 12px; border-left:3px solid var(--accent); background:rgba(127,127,127,.08); margin:12px 0; }
-  .slot { margin:10px 0; } .slot small { color:var(--muted); }
-  .choice label { font-weight:400; display:flex; gap:8px; align-items:center; margin:6px 0; }
+  button.secondary:hover:not(:disabled) { background:var(--tint); color:var(--accent-dark); border-color:var(--accent-dark); }
+  button:focus-visible { outline:3px solid var(--tint); outline-offset:2px; }
+  button:disabled { opacity:.45; cursor:default; }
+  .err { color:var(--err); margin-top:14px; font-weight:400; } .hidden { display:none; }
+  .spoken { padding:16px 20px; border-left:4px solid var(--accent); background:var(--tint); margin:0 0 8px; font-size:1.05rem; }
+  .spoken b { font:700 .85rem "Roboto Condensed", Roboto, sans-serif; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); }
+  .slot { margin:0; }
+  .choice label { font:300 1rem Roboto, sans-serif; text-transform:none; letter-spacing:0; display:flex; gap:10px; align-items:center; margin:10px 0; }
+  .meta { font:400 1rem "Roboto Condensed", Roboto, sans-serif; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 18px; } .meta b { color:var(--fg); font-weight:700; }
+  .card img { display:block; width:100%; height:auto; border-radius:3px; margin-top:8px; }
+  .card a { color:var(--accent); } code { font-size:.9em; word-break:break-all; }
 </style>
 </head>
 <body>
-<main>
+<header class="top"><div class="in">
   <h1>Gottesdienst-Vorbereitung</h1>
+  <p>Bibeltexte, Perikopen und Bild zum Wochenspruch</p>
+</div></header>
+<main>
   <ol class="steps" id="steps">
     <li>1 · Datum</li><li>2 · Lesungen</li><li>3 · Bild</li><li>4 · Ergebnis</li>
   </ol>
@@ -127,7 +146,7 @@ function stepReadings(msg) {
   state.step = 1;
   const l = state.lect, de = l.sunday && state.form.ordnung === 'de';
   view(`
-    <p><b>${esc(l.sundayName || 'Gottesdienst')}</b> · ${fmt(l.date)}${l.season ? ' · ' + esc(l.season) : ''}${l.color ? ' · ' + esc(l.color) : ''}</p>
+    <p class="meta"><b>${esc(l.sundayName || 'Gottesdienst')}</b> · ${fmt(l.date)}${l.season ? ' · ' + esc(l.season) : ''}${l.color ? ' · ' + esc(l.color) : ''}</p>
     ${de && l.wochenspruch ? `<div class="spoken"><b>Wochenspruch (${esc(l.wochenspruch.reference)})</b><br>${esc(l.wochenspruch.text)}</div>` : ''}
     ${de ? `<p class="hint">Evangelium: ${esc(l.evangelium)} · Wochenpsalm: ${esc(l.wochenpsalm)}</p>` : ''}
     ${slotRow('at','Lesung Altes Testament')}${slotRow('nt','Lesung Neues Testament')}${slotRow('predigttext','Predigttext')}
