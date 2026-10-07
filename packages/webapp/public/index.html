@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gottesdienst-Vorbereitung</title>
+<style>
+  :root { --bg:#f6f4ef; --fg:#222; --muted:#777; --card:#fff; --accent:#4a7c59; --line:#ddd; --err:#b91c1c; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1c1c1a; --fg:#e8e6e1; --muted:#999; --card:#262624; --accent:#7fb592; --line:#3a3a37; --err:#f08080; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.4rem; margin:0 0 16px; }
+  ol.steps { display:flex; gap:8px; list-style:none; padding:0; margin:0 0 20px; flex-wrap:wrap; }
+  ol.steps li { padding:4px 12px; border-radius:999px; border:1px solid var(--line); color:var(--muted); font-size:.85rem; }
+  ol.steps li.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  ol.steps li.done { color:var(--accent); border-color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
+  label { display:block; font-weight:600; margin:14px 0 4px; font-size:.9rem; }
+  input[type=text], input[type=date], input[type=number], textarea, select {
+    width:100%; padding:8px 10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:6px; }
+  textarea { min-height:90px; resize:vertical; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; } .row > * { flex:1; min-width:160px; }
+  .hint { color:var(--muted); font-size:.85rem; margin:4px 0 0; }
+  .actions { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+  button { font:inherit; padding:8px 16px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  .err { color:var(--err); margin-top:12px; } .hidden { display:none; }
+  .spoken { padding:10px 12px; border-left:3px solid var(--accent); background:rgba(127,127,127,.08); margin:12px 0; }
+  .slot { margin:10px 0; } .slot small { color:var(--muted); }
+  .choice label { font-weight:400; display:flex; gap:8px; align-items:center; margin:6px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Gottesdienst-Vorbereitung</h1>
+  <ol class="steps" id="steps">
+    <li>1 · Datum</li><li>2 · Lesungen</li><li>3 · Ergebnis</li>
+  </ol>
+  <div class="card" id="view"></div>
+</main>
+<script>
+const state = { step: 0, caps: { image:false, ollama:false }, form: { date:'', ordnung:'de' }, lect: null, slots: {}, result: null };
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function renderSteps() {
+  [...$('#steps').children].forEach((li, i) => li.className = i === state.step ? 'active' : i < state.step ? 'done' : '');
+}
+
+function view(html) { $('#view').innerHTML = html; renderSteps(); }
+
+function stepDate(msg) {
+  state.step = 0;
+  const f = state.form;
+  view(`
+    <label for="date">Datum des Gottesdienstes</label>
+    <input type="date" id="date" value="${esc(f.date)}">
+    <label for="ordnung">Perikopenordnung</label>
+    <select id="ordnung">
+      <option value="de" ${f.ordnung==='de'?'selected':''}>Deutsch (EKD) – mit Wochenspruch, Psalm, Evangelium</option>
+      <option value="ch" ${f.ordnung==='ch'?'selected':''}>Schweizerisch (pfarrverein.ch)</option>
+    </select>
+    <div id="sunday" class="hidden"></div>
+    <p class="err ${msg?'':'hidden'}" id="err">${esc(msg)}</p>
+    <div class="actions"><button id="next">Weiter</button></div>`);
+  $('#next').onclick = () => loadLect($('#date').value, $('#ordnung').value);
+}
+
+async function loadLect(date, ordnung) {
+  if (!date) return stepDate('Bitte ein Datum wählen.');
+  state.form = { date, ordnung };
+  $('#next').disabled = true; $('#next').textContent = 'Lade …';
+  try {
+    const l = await api('/api/lectionary', { date, ordnung });
+    if (!l.sunday) return stepNoSunday(l);
+    state.lect = l;
+    state.slots = {
+      at: { reference: l.at, perikope: !!l.at },
+      nt: { reference: l.nt, perikope: !!l.nt },
+      predigttext: { reference: l.predigttext, perikope: !!l.predigttext },
+    };
+    stepReadings();
+  } catch (e) { stepDate(e.message); }
+}
+
+function fmt(d) { const [y,m,t] = d.split('-'); return `${t}.${m}.${y}`; }
+
+function stepNoSunday(l) {
+  state.step = 0;
+  view(`
+    <p>Der <b>${fmt(state.form.date)}</b> ist kein Sonntag.</p>
+    <div class="choice">
+      <label><input type="radio" name="o" value="${l.prevSunday}" checked> Perikopen des vorherigen Sonntags (${fmt(l.prevSunday)})</label>
+      <label><input type="radio" name="o" value="${l.nextSunday}"> Perikopen des nächsten Sonntags (${fmt(l.nextSunday)})</label>
+      <label><input type="radio" name="o" value="manual"> Bibelstellen manuell eingeben</label>
+    </div>
+    <div class="actions"><button class="secondary" id="back">Zurück</button><button id="next">Weiter</button></div>`);
+  $('#back').onclick = () => stepDate();
+  $('#next').onclick = () => {
+    const v = $('input[name=o]:checked').value;
+    if (v === 'manual') {
+      state.lect = { sunday:false, date: state.form.date, ordnung: state.form.ordnung, sundayName:'' };
+      state.slots = { at:{reference:''}, nt:{reference:''}, predigttext:{reference:''} };
+      stepReadings();
+    } else loadLect(v, state.form.ordnung);
+  };
+}
+
+function slotRow(key, label) {
+  const s = state.slots[key] ?? { reference:'' };
+  const sug = state.lect[key] || '';
+  return `<div class="slot"><label for="s_${key}">${label}</label>
+    <input type="text" id="s_${key}" value="${esc(s.reference)}" placeholder="z.B. Jes 55,1-5 (leer = überspringen)">
+    ${sug ? `<p class="hint">Perikopenordnung: ${esc(sug)}</p>` : ''}</div>`;
+}
+
+function stepReadings(msg) {
+  state.step = 1;
+  const l = state.lect, de = l.sunday && state.form.ordnung === 'de';
+  view(`
+    <p><b>${esc(l.sundayName || 'Gottesdienst')}</b> · ${fmt(l.date)}${l.season ? ' · ' + esc(l.season) : ''}${l.color ? ' · ' + esc(l.color) : ''}</p>
+    ${de && l.wochenspruch ? `<div class="spoken"><b>Wochenspruch (${esc(l.wochenspruch.reference)})</b><br>${esc(l.wochenspruch.text)}</div>` : ''}
+    ${de ? `<p class="hint">Evangelium: ${esc(l.evangelium)} · Wochenpsalm: ${esc(l.wochenpsalm)}</p>` : ''}
+    ${slotRow('at','Lesung Altes Testament')}${slotRow('nt','Lesung Neues Testament')}${slotRow('predigttext','Predigttext')}
+    <p class="err ${msg?'':'hidden'}">${esc(msg)}</p>
+    <div class="actions"><button class="secondary" id="back">Zurück</button><button id="next">HTML erzeugen</button></div>`);
+  $('#back').onclick = () => stepDate();
+  $('#next').onclick = generate;
+}
+
+async function generate() {
+  const l = state.lect, de = l.sunday && state.form.ordnung === 'de';
+  const slots = {};
+  for (const k of ['at','nt','predigttext']) {
+    const ref = $('#s_' + k).value.trim();
+    slots[k] = { reference: ref, perikope: !!ref && ref === (l[k] || '') };
+  }
+  if (de) {
+    slots.evangelium = { reference: l.evangelium };
+    slots.wochenpsalm = { reference: l.wochenpsalm };
+    if (l.wochenspruch) slots.wochenspruch = { reference: l.wochenspruch.reference, fallbackText: l.wochenspruch.text };
+  }
+  $('#next').disabled = true; $('#next').textContent = 'Erzeuge …';
+  try {
+    state.result = await api('/api/generate', {
+      date: l.date, ordnung: state.form.ordnung, deOnly: de,
+      sundayName: l.sundayName, colorRaw: l.colorRaw, seasonRaw: l.seasonRaw, slots });
+    stepResult();
+  } catch (e) { stepReadings(e.message); }
+}
+
+function stepResult() {
+  state.step = 2;
+  view(`
+    <p>Gespeichert: <code>${esc(state.result.file)}</code></p>
+    <p><a href="${state.result.url}" target="_blank" rel="noopener">HTML öffnen</a></p>
+    <div class="actions"><button id="again">Neuer Gottesdienst</button></div>`);
+  $('#again').onclick = () => { state.step = 0; state.lect = null; stepDate(); };
+}
+
+api('/api/capabilities').then(c => { state.caps = c; }).catch(() => {}).finally(() => stepDate());
+</script>
+</body>
+</html>

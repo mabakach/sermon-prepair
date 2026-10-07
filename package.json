@@ -6,7 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/mcp-sermon-prep",
-    "dev": "npm run dev --workspace=packages/mcp-sermon-prep"
+    "build": "npm run build --workspace=packages/mcp-sermon-prep && npm run build --workspace=packages/webapp",
+    "dev": "npm run dev --workspace=packages/mcp-sermon-prep",
+    "web": "npm run start --workspace=packages/webapp"
   }
 }
