@@ -51,7 +51,7 @@ Nur bei `--bild` **und** deutscher Ordnung (Wochenspruch vorhanden). Sonst Hinwe
    > Bild-Prompt: *[englischer Prompt]*
    > Seed: *[basis]*
    > Enter = übernehmen, oder neuen Prompt und/oder Seed eingeben (z.B. `Seed 42` oder ein neuer Prompt).
-   Warte auf die Antwort. Leere Antwort = übernehmen. Eingegebener Prompt ersetzt den Vorschlag (wird unverändert verwendet), eingegebene Zahl ersetzt `basis`. Frage so lange nach, bis der Benutzer bestätigt (Enter) bzw. nichts mehr ändern will, dann erst generieren.
+   Stelle diese Frage **genau einmal** und beende deine Nachricht danach. Sobald die Antwort kommt, **fahre sofort fort** (keine Rückfrage, keine Zusammenfassung, kein Anhalten): Leere Antwort/Enter/"ok"/"ja" = Vorschlag übernehmen. Enthält die Antwort eine Zahl nach "Seed" (oder nur eine Zahl), ist das der neue Seed (`basis`). Jeder andere Text ist der neue Prompt und wird unverändert verwendet (auch deutsch oder ohne 16:9-Zusatz; ggf. Seed und Prompt gemeinsam). Rufe danach direkt `generate_image` mit dem endgültigen Prompt und Seed auf und setze mit Schritt 5 und dem Schreiben der HTML-Datei fort.
 4. Format **16:9** (Beamer): immer `width: 1920, height: 1080`.
    **Seed-Vorschlag:** `basis` = Unix-Timestamp von Mitternacht UTC des Gottesdienst-Datums (z.B. 2026-10-11 → `date -u -j -f "%Y-%m-%d %H:%M:%S" "2026-10-11 00:00:00" +%s` = 1791676800). Variante k nutzt `basis + k - 1`.
    Anzahl Varianten `n`: Standard 1, mit `--varianten <n>` 2 bis 4.
