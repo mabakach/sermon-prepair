@@ -5,6 +5,7 @@ export interface Job {
   kind: string;
   status: 'running' | 'done' | 'error';
   startedAt: number;
+  progress?: { step: number; total: number };
   result?: unknown;
   error?: string;
 }
@@ -13,12 +14,12 @@ const jobs = new Map<string, Job>();
 let running: Job | null = null;
 
 /** Nur ein Bildjob gleichzeitig (RAM: Klein 9B braucht ~20 GB). */
-export function startJob(kind: string, work: () => Promise<unknown>): Job {
+export function startJob(kind: string, work: (job: Job) => Promise<unknown>): Job {
   if (running) throw new Error('Es läuft bereits eine Bildgenerierung. Bitte warten.');
   const job: Job = { id: randomUUID(), kind, status: 'running', startedAt: Date.now() };
   jobs.set(job.id, job);
   running = job;
-  work()
+  work(job)
     .then((r) => { job.result = r; job.status = 'done'; })
     .catch((e) => { job.error = e instanceof Error ? e.message : String(e); job.status = 'error'; })
     .finally(() => { running = null; });

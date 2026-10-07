@@ -227,11 +227,11 @@ const server = createServer(async (req, res) => {
       const wsFallback = typeof body.fallbackText === 'string' ? body.fallbackText : '';
       const dir = imageDir(body);
       const position = ['top', 'bottom'].includes(body.position) ? body.position : 'auto';
-      return send(res, 200, jobResponse(() => startJob('final', async () => {
+      return send(res, 200, jobResponse(() => startJob('final', async (job) => {
         const plain = join(dir, 'bild.png');
         const withText = join(dir, 'bild-text.png');
         const wsText = await wochenspruchText(wsRef, wsFallback);
-        await generateImage(prompt, plain, 1920, 1080, seed);
+        await generateImage(prompt, plain, 1920, 1080, seed, (step, total) => { job.progress = { step, total }; });
         const folderUrl = `/files/${encodeURIComponent(basename(dir))}`;
         if (wsText) await overlayText(plain, withText, wsText, wsRef || undefined, position);
         const t = Date.now();

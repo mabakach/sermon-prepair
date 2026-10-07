@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -54,7 +54,8 @@ export async function generateImage(
   outputPath: string,
   width = 1920,
   height = 1080,
-  seed?: number
+  seed?: number,
+  onProgress?: (step: number, total: number) => void
 ): Promise<ImageResult> {
   if (process.platform !== 'darwin') {
     throw new Error('Bildgenerierung (mflux) läuft nur auf macOS mit Apple Silicon.');
@@ -80,13 +81,25 @@ export async function generateImage(
 
   const start = Date.now();
   await new Promise<void>((resolve, reject) => {
-    execFile(findMflux(), args, { timeout: TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }, (err, _out, stderr) => {
-      if (!err) return resolve();
+    const child = spawn(findMflux(), args);
+    const timer = setTimeout(() => child.kill(), TIMEOUT_MS);
+    let stderr = '';
+    child.stderr.on('data', (chunk: Buffer) => {
+      const text = chunk.toString();
+      stderr = (stderr + text).slice(-8192);
+      const m = [...text.matchAll(/\|\s*(\d+)\/(\d+)\s*\[/g)].pop();
+      if (m && onProgress) onProgress(Number(m[1]), Number(m[2]));
+    });
+    child.stdout.resume();
+    child.on('error', (err) => { clearTimeout(timer); reject(new Error(`mflux fehlgeschlagen: ${err.message}`)); });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) return resolve();
       const hint = /gated|restricted|log in/i.test(stderr)
         ? ' (Hugging Face: Lizenz für black-forest-labs/FLUX.2-klein-9B akzeptieren und `hf auth login` ausführen)'
         : '';
-      const tail = stderr.trim().split('\n').slice(-3).join(' | ');
-      reject(new Error(`mflux fehlgeschlagen: ${(err as Error).message}${hint} ${tail}`));
+      const tail = stderr.trim().split(/[\r\n]+/).slice(-3).join(' | ');
+      reject(new Error(`mflux fehlgeschlagen: Exit-Code ${code}${hint} ${tail}`));
     });
   });
 
