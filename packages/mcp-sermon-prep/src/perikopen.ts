@@ -12,6 +12,8 @@ export interface LectionaryResult {
   /** Only set for the German order (kirchenjahr-evangelisch.de). */
   wochenspruch?: { text: string; reference: string };
   wochenpsalm?: string;
+  /** Other holidays on the same date (e.g. Christnacht next to Christvesper). Re-call with `holiday` to pick one. */
+  alternatives?: string[];
 }
 
 // The page uses a <table> where each Sunday spans multiple <tr> rows:
@@ -22,14 +24,14 @@ export interface LectionaryResult {
 
 export type Ordnung = 'de' | 'ch';
 
-export async function getLectionary(date: string, ordnung: Ordnung = 'de'): Promise<LectionaryResult> {
-  return ordnung === 'ch' ? getLectionaryCh(date) : getLectionaryDe(date);
+export async function getLectionary(date: string, ordnung: Ordnung = 'de', holiday?: string): Promise<LectionaryResult> {
+  return ordnung === 'ch' ? getLectionaryCh(date) : getLectionaryDe(date, holiday);
 }
 
 // Deutsche Perikopenordnung: kirchenjahr-evangelisch.de
 // The start page lists every upcoming holiday as <a class="day-circle" data-holiday-slug data-holiday-date>.
 // The detail page "<slug>/" has a "Liturgische Texte" block with label/value pairs.
-async function getLectionaryDe(date: string): Promise<LectionaryResult> {
+async function getLectionaryDe(date: string, holiday?: string): Promise<LectionaryResult> {
   const [year, month, day] = date.split('-');
   const targetDate = `${day}.${month}.${year}`;
 
@@ -43,7 +45,13 @@ async function getLectionaryDe(date: string): Promise<LectionaryResult> {
   if (entries.length === 0) {
     throw new Error(`Kein Eintrag für ${targetDate} auf kirchenjahr-evangelisch.de gefunden.`);
   }
-  const entry = entries.find(a => /sonntag|advent|ostern|pfingst|trinitatis|epiphanias|invokavit|reminiszere|okuli|laetare|judika|quasimodogeniti|miserikordias|jubilate|kantate|rogate|exaudi|estomihi|sexagesimae|septuagesimae/i.test(
+  const byTitle = holiday
+    ? entries.find(a => (a.getAttribute('data-holiday-title') ?? '').trim().toLowerCase() === holiday.trim().toLowerCase())
+    : undefined;
+  if (holiday && !byTitle) {
+    throw new Error(`Kein Eintrag "${holiday}" am ${targetDate}. Verfügbar: ${entries.map(a => a.getAttribute('data-holiday-title')).join(', ')}`);
+  }
+  const entry = byTitle ?? entries.find(a => /sonntag|advent|ostern|pfingst|trinitatis|epiphanias|invokavit|reminiszere|okuli|laetare|judika|quasimodogeniti|miserikordias|jubilate|kantate|rogate|exaudi|estomihi|sexagesimae|septuagesimae/i.test(
     a.getAttribute('data-holiday-title') ?? '')) ?? entries[0];
   const sunday_name = (entry.getAttribute('data-holiday-title') ?? '').trim();
   const slug = entry.getAttribute('data-holiday-slug');
@@ -100,7 +108,15 @@ async function getLectionaryDe(date: string): Promise<LectionaryResult> {
   }
   const wochenpsalm = firstText(subline('Wochenpsalm')) || undefined;
 
-  return { sunday_name, date: targetDate, passages, wochenspruch, wochenpsalm };
+  const alternatives = entries
+    .filter(a => a !== entry)
+    .map(a => (a.getAttribute('data-holiday-title') ?? '').trim())
+    .filter(Boolean);
+
+  return {
+    sunday_name, date: targetDate, passages, wochenspruch, wochenpsalm,
+    ...(alternatives.length ? { alternatives } : {}),
+  };
 }
 
 // Schweizer Perikopenordnung: pfarrverein.ch
@@ -156,7 +172,11 @@ async function getLectionaryCh(date: string): Promise<LectionaryResult> {
     if (v && v !== ' ') verseCells.push(v);
   }
 
-  const typeLabels = ['Lesung Altes Testament', 'Lesung Neues Testament', 'Predigttext'];
+  // The page has no per-row type column. Regular Sundays have exactly three rows (AT, NT, Predigttext);
+  // feast days have a different number of rows, so the slot names would be guesses: label them neutrally.
+  const typeLabels = verseCells.length === 3
+    ? ['Lesung Altes Testament', 'Lesung Neues Testament', 'Predigttext']
+    : [];
   const passages: Passage[] = [];
 
   verseCells.forEach((raw, i) => {

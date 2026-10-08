@@ -97,12 +97,12 @@ function stepDate(msg) {
   $('#next').onclick = () => loadLect($('#date').value, $('#ordnung').value);
 }
 
-async function loadLect(date, ordnung) {
+async function loadLect(date, ordnung, holiday) {
   if (!date) return stepDate('Bitte ein Datum wählen.');
   state.form = { date, ordnung };
   $('#next').disabled = true; $('#next').textContent = 'Lade …';
   try {
-    const l = await api('/api/lectionary', { date, ordnung });
+    const l = await api('/api/lectionary', { date, ordnung, holiday });
     if (!l.sunday) return stepNoSunday(l);
     state.lect = l;
     state.slots = {
@@ -150,12 +150,15 @@ function stepReadings(msg) {
   const l = state.lect, de = l.sunday && state.form.ordnung === 'de';
   view(`
     <p class="meta"><b>${esc(l.sundayName || 'Gottesdienst')}</b> · ${fmt(l.date)}${l.season ? ' · ' + esc(l.season) : ''}${l.color ? ' · ' + esc(l.color) : ''}</p>
+    ${l.alternatives?.length ? `<p class="hint">Am selben Datum: ${l.alternatives.map(a => `<a href="#" class="alt" data-h="${esc(a)}">${esc(a)}</a>`).join(', ')}</p>` : ''}
+    ${l.unassigned?.length ? `<p class="hint">Perikopenordnung (ohne Zuordnung): ${l.unassigned.map(p => esc(p.type + ': ' + p.reference)).join(' · ')}</p>` : ''}
     ${de && l.wochenspruch ? `<div class="spoken"><b>Wochenspruch (${esc(l.wochenspruch.reference)})</b><br>${esc(l.wochenspruch.text)}</div>` : ''}
     ${de ? `<p class="hint">Evangelium: ${esc(l.evangelium)} · Wochenpsalm: ${esc(l.wochenpsalm)}</p>` : ''}
     ${slotRow('at','Lesung Altes Testament')}${slotRow('nt','Lesung Neues Testament')}${slotRow('predigttext','Predigttext')}
     <p class="err ${msg?'':'hidden'}">${esc(msg)}</p>
     <div class="actions"><button class="secondary" id="back">Zurück</button><button id="next">${state.caps.image && de && l.wochenspruch ? 'Weiter zum Bild' : 'HTML erzeugen'}</button></div>`);
   $('#back').onclick = () => stepDate();
+  document.querySelectorAll('a.alt').forEach(a => a.onclick = (ev) => { ev.preventDefault(); loadLect(l.date, state.form.ordnung, a.dataset.h); });
   $('#next').onclick = () => {
     const slots = {};
     for (const k of ['at','nt','predigttext']) {

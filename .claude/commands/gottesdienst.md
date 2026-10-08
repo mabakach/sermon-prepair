@@ -22,7 +22,7 @@ Wenn das Datum im Format `DD.MM.YYYY` angegeben wurde, wandle es zunächst in `Y
 
 ## Perikopenordnung wählen
 
-Vor jedem `get_lectionary`-Aufruf (Fall A, und A/B in Fall C) muss die Ordnung feststehen. Wurde `--ordnung` nicht übergeben und sind nicht alle drei Bibelstellen als Flags angegeben, frage:
+Vor jedem `get_lectionary`-Aufruf (Schritt 1, und A/B in Fall C) muss die Ordnung feststehen. Wurde `--ordnung` nicht übergeben und sind nicht alle drei Bibelstellen als Flags angegeben, frage:
 
 > Welche Perikopenordnung soll verwendet werden?
 > **A)** Deutsche Perikopenordnung *(Standard, Enter)*
@@ -76,15 +76,21 @@ Diese Unterscheidung muss für AT, NT und Predigttext separat getrackt und in di
 
 ## Steuerlogik
 
-### Schritt 1: Ist das Datum ein Sonntag?
+### Schritt 1: Gibt es für das Datum eine Perikopenordnung?
 
-Berechne den Wochentag (`new Date('YYYY-MM-DD').getDay()`, Sonntag = 0).
+Ruf zuerst `get_lectionary(date, ordnung)` auf, auch wenn das Datum kein Sonntag ist (Karfreitag, Christvesper/Heiliger Abend, Weihnachten, Himmelfahrt usw.).
+
+- **Treffer** (Sonntag oder Feiertag): weiter mit **Fall A**. `sunday_name` ist dann der Feiertagsname (z.B. „Karfreitag“, „Christfest I“).
+  - Liefert die schweizerische Ordnung neutrale Labels („Lesung 1“, „Lesung 2 (Option A)“ …) statt AT/NT/Predigttext (Feiertage), zeige die Stellen so an und frage, welche Stelle in welchen Slot (AT, NT, Predigttext) kommt. Zugeordnete Stellen gelten als Perikopenordnung (Badge gesetzt).
+  - Enthält das Ergebnis `alternatives` (nur deutsche Ordnung, z.B. „Christvesper“ und „Christnacht“ am 24.12.), frage den Benutzer, welcher Gottesdienst gemeint ist, und ruf `get_lectionary` bei abweichender Wahl erneut mit `holiday` auf.
+- **Kein Treffer** und Datum ist ein Sonntag: Fehler melden.
+- **Kein Treffer** und Datum ist kein Sonntag: weiter mit **Fall B** oder **Fall C** (Wochentag via `new Date('YYYY-MM-DD').getDay()`).
 
 ---
 
-### Fall A: Datum ist ein Sonntag
+### Fall A: Datum ist ein Sonntag oder Feiertag mit Perikopenordnung
 
-1. Ruf `get_lectionary(date, ordnung)` auf → liefert `sunday_name` und die Perikopen-Stellen.
+1. Verwende das Ergebnis von `get_lectionary` aus Schritt 1 (`sunday_name` und Perikopen-Stellen).
 2. Ruf `get_church_calendar(date, sunday_name)` auf → liefert `liturgical_color` und `liturgical_season`.
 3. **Wurden KEINE eigenen Bibelstellen als Parameter übergeben?**
 
@@ -125,7 +131,7 @@ Berechne den Wochentag (`new Date('YYYY-MM-DD').getDay()`, Sonntag = 0).
 
 ---
 
-### Fall B: Datum ist KEIN Sonntag – mindestens eine Bibelstelle übergeben
+### Fall B: Datum ist KEIN Sonntag/Feiertag – mindestens eine Bibelstelle übergeben
 
 Überspringe Kirchenjahr- und Perikopen-Abfrage. Kein Badge für irgendeine Stelle.
 
@@ -139,7 +145,7 @@ Berechne den Wochentag (`new Date('YYYY-MM-DD').getDay()`, Sonntag = 0).
 
 ---
 
-### Fall C: Datum ist KEIN Sonntag – keine Bibelstellen übergeben
+### Fall C: Datum ist KEIN Sonntag/Feiertag – keine Bibelstellen übergeben
 
 Berechne den vorherigen Sonntag (`prev`) und den nächsten Sonntag (`next`).
 

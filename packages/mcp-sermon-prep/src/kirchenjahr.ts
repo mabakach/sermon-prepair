@@ -26,18 +26,15 @@ export async function getChurchCalendar(date: string, sundayName: string): Promi
   const html = await res.text();
   const root = parse(html);
 
-  // Extract key-value pairs from the Steckbrief section.
-  // The site uses heading tags (h2/h3) as labels followed by the value in the next sibling/element.
-  const text = root.text;
-
-  const extract = (label: string): string => {
-    const regex = new RegExp(`${label}\\s*\\n?\\s*([^\\n]+)`);
-    const m = text.match(regex);
-    return m ? m[1].trim() : '';
-  };
-
-  const liturgical_color = extract('Liturgische Farbe');
-  const liturgical_season = extract('Festzeit');
+  // Steckbrief: <div class="profile-entry-container"> with <h3> label and a sibling value element.
+  const clean = (t: string) => t.replace(/\s+/g, ' ').trim();
+  const liturgical_color = clean(root.querySelector('.profile-liturgical-color')?.text ?? '');
+  const liturgical_season = clean(
+    root
+      .querySelectorAll('.profile-entry-container')
+      .find(c => clean(c.querySelector('h3')?.text ?? '') === 'Festzeit')
+      ?.querySelector('.profile-entry-content')?.text ?? ''
+  );
 
   return {
     sunday_name: sundayName,

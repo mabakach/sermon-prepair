@@ -39,20 +39,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'get_lectionary',
       description:
-        'Holt die Perikopenordnung für einen Sonntag. Standard: deutsche Ordnung ' +
+        'Holt die Perikopenordnung für einen Sonntag oder kirchlichen Feiertag (z.B. Karfreitag, Christvesper, Christfest I). Standard: deutsche Ordnung ' +
         '(kirchenjahr-evangelisch.de: AT, Epistel, Evangelium, Predigttext); ' +
-        'alternativ schweizerische Ordnung (pfarrverein.ch). Gibt auch den Sonntagsnamen zurück.',
+        'alternativ schweizerische Ordnung (pfarrverein.ch). Gibt auch den Sonntags-/Feiertagsnamen zurück; `alternatives` listet weitere Feiertage am selben Datum.',
       inputSchema: {
         type: 'object',
         properties: {
           date: {
             type: 'string',
-            description: 'Datum eines Sonntags im Format YYYY-MM-DD',
+            description: 'Datum (Sonntag oder Feiertag) im Format YYYY-MM-DD',
           },
           ordnung: {
             type: 'string',
             enum: ['de', 'ch'],
             description: 'Perikopenordnung: "de" = deutsch (Standard), "ch" = schweizerisch',
+          },
+          holiday: {
+            type: 'string',
+            description: 'Nur "de": Feiertagsname, falls mehrere am Datum (z.B. "Christnacht" statt "Christvesper")',
           },
         },
         required: ['date'],
@@ -119,7 +123,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'get_lectionary') {
       const result = await getLectionary(
         args!.date as string,
-        args!.ordnung === 'ch' ? 'ch' : 'de'
+        args!.ordnung === 'ch' ? 'ch' : 'de',
+        args!.holiday as string | undefined
       );
       return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     }

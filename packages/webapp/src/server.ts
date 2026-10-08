@@ -72,11 +72,16 @@ function isSunday(date: string): boolean {
 async function lectionary(body: any) {
   const date = checkDate(body.date);
   const ordnung: Ordnung = body.ordnung === 'ch' ? 'ch' : 'de';
-  if (!isSunday(date)) {
+  const holiday = typeof body.holiday === 'string' && body.holiday ? body.holiday : undefined;
+  let lect;
+  try {
+    // Feiertage (Karfreitag, Christvesper, Christfest …) haben auch an Nicht-Sonntagen eine Perikopenordnung.
+    lect = await getLectionary(date, ordnung, holiday);
+  } catch (e) {
+    if (isSunday(date)) throw e;
     const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
     return { sunday: false, prevSunday: shiftDays(date, -dow), nextSunday: shiftDays(date, 7 - dow) };
   }
-  const lect = await getLectionary(date, ordnung);
   const cal = await getChurchCalendar(date, lect.sunday_name).catch(() => null);
   const byType = (re: RegExp) => lect.passages.find((p) => re.test(p.type))?.reference ?? '';
   return {
@@ -94,6 +99,9 @@ async function lectionary(body: any) {
     predigttext: byType(/Predigttext/),
     wochenspruch: lect.wochenspruch ?? null,
     wochenpsalm: lect.wochenpsalm ?? '',
+    alternatives: lect.alternatives ?? [],
+    // Schweizer Feiertage: Seite liefert keine Slot-Namen ("Lesung 1", …) → Zuordnung macht der Benutzer.
+    unassigned: lect.passages.filter((p) => !/Altes Testament|Neues Testament|Evangelium|Predigttext/.test(p.type)),
   };
 }
 
