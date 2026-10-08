@@ -37,9 +37,16 @@ def load(path, size):
     return ImageFont.load_default(size)
 
 
-def wrap(draw, text, font, max_w):
+PUNCT_END = ',.;:!?'
+
+
+def ends_with_punct(word):
+    return word.rstrip('»«"\u201c\u201d\u2019\')').endswith(tuple(PUNCT_END))
+
+
+def greedy_wrap(draw, words, font, max_w):
     lines, line = [], ''
-    for word in text.split():
+    for word in words:
         trial = f'{line} {word}'.strip()
         if draw.textlength(trial, font=font) <= max_w or not line:
             line = trial
@@ -49,6 +56,55 @@ def wrap(draw, text, font, max_w):
     if line:
         lines.append(line)
     return lines
+
+
+def wrap(draw, text, font, max_w):
+    """Umbruch bevorzugt nach Satzzeichen (Komma, Punkt, ...). Erlaubt wird die minimale
+    Zeilenzahl oder eine Zeile mehr, wenn dadurch Umbrüche mitten im Satzteil entfallen.
+    Danach gewinnt die gleichmässigste Zeilenlänge."""
+    words = text.split()
+    n = len(greedy_wrap(draw, words, font, max_w))
+    m = len(words)
+    if n < 2:
+        return greedy_wrap(draw, words, font, max_w)
+
+    INF = float('inf')
+    BREAK_PENALTY = 10.0  # grösser als jede Summe von Längenabweichungen
+    EXTRA_LINE_PENALTY = 3.0  # eine Zeile mehr ist günstiger als ein Umbruch ohne Satzzeichen
+    max_lines = n + 1
+
+    def line_cost(i, j):
+        width = draw.textlength(' '.join(words[i:j]), font=font)
+        if width > max_w and j - i > 1:
+            return INF
+        cost = 0.0
+        if j < m:  # keine Abweichungskosten für die letzte Zeile
+            cost += ((max_w - width) / max_w) ** 2
+            if not ends_with_punct(words[j - 1]):
+                cost += BREAK_PENALTY
+        return cost
+
+    # dp[k][j]: minimale Kosten, die ersten j Wörter auf k Zeilen zu verteilen
+    dp = [[INF] * (m + 1) for _ in range(max_lines + 1)]
+    back = [[0] * (m + 1) for _ in range(max_lines + 1)]
+    dp[0][0] = 0.0
+    for k in range(1, max_lines + 1):
+        for j in range(k, m + 1):
+            for i in range(k - 1, j):
+                if dp[k - 1][i] == INF:
+                    continue
+                c = dp[k - 1][i] + line_cost(i, j)
+                if c < dp[k][j]:
+                    dp[k][j], back[k][j] = c, i
+    best_k = min(range(n, max_lines + 1), key=lambda k: dp[k][m] + (k - n) * EXTRA_LINE_PENALTY)
+    if dp[best_k][m] == INF:
+        return greedy_wrap(draw, words, font, max_w)
+    lines, j = [], m
+    for k in range(best_k, 0, -1):
+        i = back[k][j]
+        lines.append(' '.join(words[i:j]))
+        j = i
+    return lines[::-1]
 
 
 def calmer_band(img):
